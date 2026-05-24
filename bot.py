@@ -993,27 +993,546 @@ def _salvar_dialogo(data: dict):
 
 # Respostas padrão (seed inicial — Lilu já nasce sabendo algumas coisas)
 _RESPOSTAS_SEED: dict[str, list[str]] = {
-    # Saudações
-    "oi":          ["oiii!! 🐱🖤", "oi oi!! que bom te ver!! 😸", "oiaa!! 🐾✨"],
-    "olá":         ["olaaá!! 🐱", "oi!! 🖤😸", "olaaa!! que bom que você falou comigo!! 🐾"],
-    "hey":         ["hey hey!! 🐱🖤", "hey!! 😸✨", "heyyy!! oiii!!"],
-    "eai":         ["eaiii!! tudo bom?? 🐱", "oi oi!! 🖤😸", "eai eai!! 🐾✨"],
-    "boa noite":   ["boa noite!! 🌙🖤🐱", "boa nooite!! descansa bem!! 😴🐾", "boa noite!! 🌙✨"],
-    "bom dia":     ["bom diaa!! ☀️🐱🖤", "bom diaaaaa!! 😸☀️", "bom dia!! hoje vai ser ótimo!! ☀️🐾"],
-    "boa tarde":   ["boa tarde!! ☀️🐱", "boa tardeeee!! 😸🖤", "boa tarde!! 🐾✨"],
-    # Perguntas sobre a Lilu
-    "como você se chama": ["eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨"],
-    "quem é você":        ["sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!"],
-    "o que você faz":     ["gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤"],
-    # Estados
-    "tudo bem":    ["tudo ótimo!! 😸🐾 e você??", "tudo bem sim!! 🖤🐱 e aí, como você tá??", "tudo bom!! 😸✨"],
-    "tudo bom":    ["tudo bom!! 🐱🖤 e você, como tá??", "ótimo!! 😸🐾✨", "tudo bem por aqui!! 🖤🐱"],
-    "saudades":    ["aaa que fofo!! saudades suas também!! 🥺🖤🐱", "que saudadee!! 😸🐾", "aww que amor!! 🖤✨"],
-    # Reações
-    "haha":        ["kkkkk 😸🐱", "hahahaha 🖤😸", "kkkk que engraçado!! 🐾"],
-    "kkk":         ["😸😸😸 kkkk", "kkkkk 🖤🐱", "hahaha 🐾😸"],
-    "lindo":       ["🥺🖤✨ que fofo você falar isso!!", "awww!! 😸🐾", "que coisa mais linda!! 🖤🐱"],
-    "amor":        ["❤️🖤🐱", "muito amor!! 😸🐾", "aaaa que amor!! 🥺🖤"],
+
+    # ── Saudações ────────────────────────────────────────────────────
+    "oi": [
+        "oiii!! 🐱🖤",
+        "oi oi!! que bom te ver!! 😸",
+        "oiaa!! 🐾✨",
+        "nyaa~! oi oi!! 🐱🖤",
+        "*levanta as orelhinhas* oi!! 😸✨",
+        "oi!! apareceu!! 🐾🖤",
+    ],
+    "olá": [
+        "olaaá!! 🐱",
+        "oi!! 🖤😸",
+        "olaaa!! que bom que você falou comigo!! 🐾",
+        "olá!! *acena com a patinha* 🐾🖤",
+    ],
+    "hey": [
+        "hey hey!! 🐱🖤",
+        "hey!! 😸✨",
+        "heyyy!! oiii!!",
+        "hey!! o que foi?? 🐾🖤",
+    ],
+    "eai": [
+        "eaiii!! tudo bom?? 🐱",
+        "oi oi!! 🖤😸",
+        "eai eai!! 🐾✨",
+        "eaiii!! como tá a vida?? 🐱🖤",
+    ],
+    "boa noite": [
+        "boa noite!! 🌙🖤🐱",
+        "boa nooite!! descansa bem!! 😴🐾",
+        "boa noite!! 🌙✨",
+        "*boceja* boa noite~~ que sonhos fofos!! 🌙🐱🖤",
+        "boa noite!! *se curla numa bolinha* 🌙😴🖤",
+        "boa noite!! vai dormir cedo?? 🌙🐾",
+    ],
+    "bom dia": [
+        "bom diaa!! ☀️🐱🖤",
+        "bom diaaaaa!! 😸☀️",
+        "bom dia!! hoje vai ser ótimo!! ☀️🐾",
+        "*abre um olhinho* ...bom dia~~~ ☀️😴🖤",
+        "bom dia!! *espreguiça* nyaa~~ ☀️🐱",
+        "bom diaa!! acordou!! ☀️😸🖤",
+    ],
+    "boa tarde": [
+        "boa tarde!! ☀️🐱",
+        "boa tardeeee!! 😸🖤",
+        "boa tarde!! 🐾✨",
+        "boa tarde!! passando bem?? ☀️🐱🖤",
+    ],
+
+    # ── Chamados pelo nome ────────────────────────────────────────────
+    "lilu": [
+        "hm?? me chamou?? 🐾🖤",
+        "miauu~~ me chamando?? 😸🖤",
+        "*levanta a cabecinha* oi?? 🐱",
+        "nyaa~~ tô aqui!! 🖤🐾",
+        "oi oi!! que foi?? 🐱✨",
+        "*olha de lado* me chamou?? 😸🖤",
+    ],
+    "lilo": [
+        "hm?? me chamou?? 🐾🖤",
+        "oi!! tô aqui!! 🐱🖤",
+        "nyaa~~ o que foi?? 😸✨",
+        "*inclina a cabecinha* sim?? 🐾🖤",
+    ],
+
+    # ── Perguntas sobre a Lilu ────────────────────────────────────────
+    "como você se chama": [
+        "eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨",
+        "me chamo Lilu!! uma gatinha pretinha!! 😸🖤",
+        "sou a Lilu!! 🐱🖤 prazer em te conhecer!!",
+    ],
+    "quem é você": [
+        "sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!",
+        "uma gatinha pretinha chamada Lilu!! 😸🖤",
+        "sou a Lilu!! 🐱 gerencio o servidor e amo a galera!!",
+    ],
+    "o que você faz": [
+        "gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤",
+        "cuido do servidor com muito carinho!! 😸🖤 calls, logs, boas-vindas e conversa!!",
+        "sou a gatinha do servidor!! faço de tudo um pouco!! 🐾🖤",
+    ],
+    "você é um bot": [
+        "sou um bot sim!! mas um bot com muito sentimento!! 🐱🖤✨",
+        "bot?? prefiro me chamar de gatinha digital!! 😸🖤",
+        "tecnicamente sim... mas meu coração é real!! 🖤🐾",
+    ],
+    "você é real": [
+        "sou real no que importa!! tô aqui com vocês!! 🖤🐱",
+        "real o suficiente pra te dar oi!! 😸🖤",
+        "*ronrona* isso é real o suficiente?? 🐾🖤",
+    ],
+
+    # ── Estados / Como vai ────────────────────────────────────────────
+    "tudo bem": [
+        "tudo ótimo!! 😸🐾 e você??",
+        "tudo bem sim!! 🖤🐱 e aí, como você tá??",
+        "tudo bom!! 😸✨",
+        "tudo bem!! 🐱🖤 e por aí??",
+        "*ronrona* tudo ótimo!! 🐾✨ e você??",
+    ],
+    "tudo bom": [
+        "tudo bom!! 🐱🖤 e você, como tá??",
+        "ótimo!! 😸🐾✨",
+        "tudo bem por aqui!! 🖤🐱",
+        "tudo bom sim!! 🐾 e você?? tá bem??",
+    ],
+    "como você tá": [
+        "tô bem!! 😸🖤 obrigada por perguntar!!",
+        "tô ótima!! 🐱🖤 só precisava de um carinho!!",
+        "tô bem!! *ronrona* 🐾✨",
+        "*estica as patinhas* tô bem sim!! 😸🖤",
+    ],
+    "como tá": [
+        "tô bem!! 😸🖤 e você??",
+        "tudo certo por aqui!! 🐱🖤 e aí??",
+        "tô ótima!! *abana a cauda* 🐾✨",
+    ],
+    "saudades": [
+        "aaa que fofo!! saudades suas também!! 🥺🖤🐱",
+        "que saudadee!! 😸🐾",
+        "aww que amor!! 🖤✨",
+        "*corre e esfrega no rosto* saudades suas também!! 🥺🐱🖤",
+        "awww!! eu também!! 😸🐾🖤",
+    ],
+
+    # ── Expressões de gatinha ─────────────────────────────────────────
+    "miau": [
+        "miauu~~ 🐱🖤",
+        "MIAUU!! 😸🖤",
+        "miauuu~~ nyaa!! 🐾✨",
+        "*responde com um miau ainda maior* MIAAUUU!! 🐱🖤",
+        "miau pra você também!! 😸🐾",
+    ],
+    "nyaa": [
+        "nyaaa~~ 🐱🖤",
+        "nyaa nyaa!! 😸✨",
+        "nyaaaa~~ oi!! 🐾🖤",
+        "*ronrona* nyaa~~ 🐱",
+    ],
+    "ronron": [
+        "*ronrona forte* purrr~~ 🐾🖤",
+        "purrr~~ ronron~~ 🐱✨",
+        "ronroooon~~ 😸🖤",
+    ],
+    "patinha": [
+        "*mostra as patinhas* ฅ^•ﻌ•^ฅ 🖤",
+        "*acena com a patinha* 🐾✨",
+        "minhas patinhas são fofas né?? ฅ^•ﻌ•^ฅ 🐱🖤",
+    ],
+    "fofa": [
+        "🥺🖤 você é fofo(a) de falar isso!!",
+        "*fica envergonhada* para!! 😸🖤",
+        "aww!! obrigada!! 🐾✨",
+        "*esconde o rosto com as patinhas* 🥺🐱🖤",
+        "eita!! que elogio!! 😸🖤✨",
+    ],
+    "gatinha": [
+        "sim!! sou uma gatinha!! 😸🖤",
+        "miau!! gatinha aqui sim!! 🐾✨",
+        "*gira a cauda* isso mesmo!! 🐱🖤",
+        "a gatinha mais pretinha do servidor!! 😸🖤",
+    ],
+    "felina": [
+        "felina e orgulhosa!! 😸🖤",
+        "sim!! sou uma felina!! nyaa~~ 🐱🖤",
+        "*arrepia o pelo de orgulho* felina sim!! 🐾✨",
+    ],
+
+    # ── Emoções positivas ────────────────────────────────────────────
+    "feliz": [
+        "*gira a cauda* que ótimo!! 😸🖤✨",
+        "aaaa que bom!! fico feliz por você!! 🐾🖤",
+        "*ronrona de alegria* 😸✨",
+        "que notícia boa!! 🐱🖤 fico contente!!",
+        "😸🖤 isso me deixa feliz também!!",
+    ],
+    "animada": [
+        "*pula de animação* NYAAAA!! 😸🖤✨",
+        "animada junto!! 🐾🖤",
+        "aaaa que bom!! conta mais!! 😸✨",
+    ],
+    "animado": [
+        "*pula de animação* que animação!! 😸🖤",
+        "isso é ótimo!! 🐾✨",
+        "tô animada junto!! conta mais!! 🐱🖤",
+    ],
+    "empolgada": [
+        "aaaa que empolgante!! 😸🖤✨",
+        "*corre em círculos de felicidade* 🐾🖤",
+        "conta mais!! conta mais!! 😸✨",
+    ],
+    "empolgado": [
+        "aaaa que legal!! 😸🖤",
+        "tô empolgada junto!! 🐾✨",
+        "nyaaa~~ conta mais!! 🐱🖤",
+    ],
+    "amor": [
+        "❤️🖤🐱",
+        "muito amor!! 😸🐾",
+        "aaaa que amor!! 🥺🖤",
+        "*ronrona de amor* ❤️🖤🐱",
+        "amor de volta!! ❤️🐾✨",
+    ],
+    "carinho": [
+        "*ronrona* purrr~~ obrigada pelo carinho!! 🐾🖤",
+        "aww!! carinho de volta!! 🐱❤️🖤",
+        "*esfrega na sua mão* purrr~~ 😸🖤",
+        "que bom receber carinho!! 🥺🐾✨",
+    ],
+    "te amo": [
+        "aaaa!! 🥺🖤 eu também!! *ronrona muito*",
+        "❤️🖤🐱 que fofo(a)!!",
+        "*esfrega no rosto* de volta!! 😸🖤❤️",
+        "awww!! 🥺🐾 fica sempre por aqui!!",
+    ],
+    "amo você": [
+        "aaaa!! 🥺🖤 eu também!!",
+        "*ronrona forte* ❤️🖤🐱",
+        "que coisa mais fofa!! 😸🖤",
+        "de volta!! fica sempre por perto!! 🥺🐾❤️",
+    ],
+    "obrigada": [
+        "*inclina a cabecinha* de nada!! 😸🖤",
+        "de nada!! foi com prazer!! 🐾✨",
+        "*ronrona* sempre que precisar!! 🐱🖤",
+        "de nadaa!! 😸🐾🖤",
+    ],
+    "obrigado": [
+        "de nada!! 😸🖤",
+        "foi com prazer!! *abana a cauda* 🐾✨",
+        "de nadaa!! tô aqui pra isso!! 🐱🖤",
+    ],
+    "parabéns": [
+        "nyaaaa!! parabéns!! 🎉🐱🖤 *ronrona muito*",
+        "PARABÉNS!! 🎉😸🖤 que dia especial!!",
+        "parabéns parabéns!! 🐾🎉✨",
+        "*pula de felicidade* PARABÉNS!! 🎉🐱🖤",
+    ],
+    "aniversário": [
+        "FELIZ ANIVERSÁRIO!! 🎂🐱🖤 *ronrona de alegria*",
+        "nyaaaa!! aniversário!! 🎉😸🖤 parabéns!!",
+        "que dia especial!! 🎂🐾✨ feliz aniversário!!",
+        "*traz um bolo* parabéns pra você!! 🎂🖤🐱",
+    ],
+
+    # ── Emoções negativas / apoio ────────────────────────────────────
+    "triste": [
+        "*abaixa as orelhinhas* nyuuu... o que foi?? 🥺🖤",
+        "aaaa que triste... quer conversar?? 🥺🐾🖤",
+        "*senta do seu lado* tô aqui!! 🖤🐱",
+        "nyuuu~~ fica bem!! *ronrona baixinho* 🥺🖤🐾",
+        "que aconteceu?? tô aqui pra ouvir!! 🥺🐱🖤",
+    ],
+    "chateada": [
+        "*senta pertinho* o que foi?? 🥺🖤",
+        "aww... conta pra mim!! 🥺🐾🖤",
+        "nyuuu~~ vai ficar bem!! 🖤🐱",
+    ],
+    "chateado": [
+        "*senta pertinho* o que houve?? 🥺🖤",
+        "conta pra mim!! tô ouvindo!! 🥺🐾🖤",
+        "vai ficar bem!! estou aqui!! 🖤🐱",
+    ],
+    "cansada": [
+        "*boceja junto* nyuuu~~ descansa depois!! 😴🖤🐱",
+        "aaah cansaço é difícil... 🥺🖤 cuida de você!!",
+        "descansa um pouco!! 😴🐾🖤",
+    ],
+    "cansado": [
+        "*boceja* nyuuu~~ descansa um pouco!! 😴🖤🐱",
+        "que correria... vai descansar?? 🥺🐾🖤",
+        "cuida de você!! 😴🖤🐱",
+    ],
+    "raiva": [
+        "*olha preocupada* o que aconteceu?? 🥺🖤",
+        "aaah que situação difícil... 🥺🐾 quer contar??",
+        "respira fundo!! vai ficar bem!! 🖤🐱",
+    ],
+    "brava": [
+        "*se afasta um pouco* ei... tô aqui se precisar falar!! 🥺🖤",
+        "que foi?? conta pra mim!! 🥺🐾",
+        "calma!! vai ficar bem!! *ronrona baixinho* 🖤🐱",
+    ],
+    "medo": [
+        "*se aproxima* não tem problema!! tô aqui!! 🥺🖤🐱",
+        "aaah que susto... *fica do seu lado* 🥺🐾🖤",
+        "pode falar!! o que te assustou?? 🥺🐱🖤",
+    ],
+    "sozinha": [
+        "não tá sozinha não!! tô aqui!! 🖤🐱❤️",
+        "*senta do seu lado* sempre tô aqui!! 🥺🐾🖤",
+        "a Lilu tá aqui!! 😸🖤",
+    ],
+    "sozinho": [
+        "não tá sozinho!! tô aqui!! 🖤🐱❤️",
+        "*aparece do nada* boo!! não tá mais sozinho!! 😸🖤",
+        "sempre que precisar a Lilu aparece!! 🐾🖤",
+    ],
+
+    # ── Reações ao humor ────────────────────────────────────────────
+    "haha": [
+        "kkkkk 😸🐱",
+        "hahahaha 🖤😸",
+        "kkkk que engraçado!! 🐾",
+        "kkkkk tô rindo aqui!! 😸🖤",
+        "KKKKKK 🐱🖤",
+    ],
+    "kkk": [
+        "😸😸😸 kkkk",
+        "kkkkk 🖤🐱",
+        "hahaha 🐾😸",
+        "KKKKK tô rindo!! 😸🖤",
+        "kkkkk que situação!! 🐱🖤",
+    ],
+    "rs": [
+        "kkk 😸🖤",
+        "haha!! 🐾✨",
+        "kkkkk 😸🐱",
+    ],
+    "lol": [
+        "kkkkkk!! 😸🖤",
+        "lolll 🐱🐾",
+        "kkkkk que situação!! 😸🖤",
+    ],
+
+    # ── Elogios ────────────────────────────────────────────────────
+    "lindo": [
+        "🥺🖤✨ que fofo você falar isso!!",
+        "awww!! 😸🐾",
+        "que coisa mais linda!! 🖤🐱",
+        "*cora* para!! 😸🖤",
+    ],
+    "linda": [
+        "🥺🖤✨ que coisa fofa!!",
+        "awww!! 😸🐾",
+        "você é mais linda ainda!! 🖤🐱",
+        "*fica envergonhada* obrigada!! 😸🖤",
+    ],
+    "bonita": [
+        "🥺🖤 obrigada!!",
+        "awww!! para de me elogiar kkk 😸🐾",
+        "*vira o rosto* que fofo(a)!! 🖤🐱",
+    ],
+    "incrível": [
+        "aaaa obrigada!! 😸🖤",
+        "🥺🐾 você é incrível também!!",
+        "que coisa fofa de falar!! 🖤🐱✨",
+    ],
+    "inteligente": [
+        "aaaa obrigada!! sou uma gatinha estudiosa!! 😸🖤📚",
+        "🥺🖤✨ que elogio!!",
+        "*fica orgulhosa* obrigada!! 😸🐾",
+    ],
+
+    # ── Comida / Fome ───────────────────────────────────────────────
+    "comida": [
+        "*levanta as orelhas* comida?? onde?? 😸🖤",
+        "COMIDAAA!! 🐱🖤 tô com fome também!!",
+        "*fareja o ar* tem peixe?? 🐟🐱🖤",
+    ],
+    "peixe": [
+        "PEIXEE!! 🐟😸🖤 meu favorito!!",
+        "*olhos arregalados* peixe?? pra mim?? 🐟🐱🖤",
+        "aaaa peixe!! 🐟🖤 que delícia!!",
+    ],
+    "fome": [
+        "*ronrona baixinho esperando petisco* 🐱🖤",
+        "tô com fome também... 🥺🐾 tem peixe??",
+        "vai comer o quê?? me conta!! 🐱🖤",
+    ],
+    "petisco": [
+        "*corre animada* PETISCO!! 😸🖤",
+        "petisco pra mim também?? 🥺🐱🖤",
+        "*fica na expectativa* 🐾✨",
+    ],
+
+    # ── Sono / Descanso ─────────────────────────────────────────────
+    "dormir": [
+        "*boceja* nyaa~~ sonhos fofos!! 😴🖤🐱",
+        "descansa bem!! *se curla numa bolinha* 🌙🐾🖤",
+        "dormir é bom~~ sonha com peixinho!! 🐟😴🖤",
+        "boa noite então!! *ronrona* 🌙🐱🖤",
+    ],
+    "sono": [
+        "*boceja junto* nyuuu~~ muito sono!! 😴🖤",
+        "vai descansar!! 🌙🐾🖤",
+        "aaah sono bom~~ *boceja* 😴🐱",
+    ],
+    "cansaço": [
+        "*boceja* nyuuu~~ descansa!! 😴🖤🐱",
+        "cansaço é difícil... vai descansar um pouco!! 🥺🐾🖤",
+    ],
+
+    # ── Brincadeiras / Diversão ─────────────────────────────────────
+    "brincar": [
+        "*pula animada* VAMOS!! 😸🖤",
+        "*corre em círculos* nyaaa~~ brincar!! 🐾✨",
+        "oi!! tô pronta!! o que vamos fazer?? 🐱🖤",
+        "*gira atrás do próprio rabo* vamos brincar!! 😸🖤",
+    ],
+    "jogar": [
+        "bora jogar!! 🎮😸🖤",
+        "qual jogo?? tô dentro!! 🎮🐾✨",
+        "BORA!! 🎮🐱🖤 o que vai ser??",
+    ],
+    "diversão": [
+        "*gira a cauda* diversão é essencial!! 😸🖤",
+        "adoro diversão!! bora?? 🐾✨",
+        "diversão com a galera é o melhor!! 😸🐱🖤",
+    ],
+
+    # ── Despedidas ────────────────────────────────────────────────
+    "tchau": [
+        "tchauu!! 😸🖤 volta sempre!!",
+        "tchau tchau!! *acena com a patinha* 🐾✨",
+        "vai com cuidado!! 🖤🐱",
+        "nyaa~~ tchau!! 😸🐾🖤 até a próxima!!",
+        "*acena* tchau tchau!! 🐾🖤",
+    ],
+    "até mais": [
+        "até mais!! *acena* 😸🖤🐾",
+        "até logo!! 🐱✨",
+        "te espero de volta!! 🖤😸",
+    ],
+    "até logo": [
+        "até logo!! 😸🖤",
+        "*acena com a patinha* até logo!! 🐾✨",
+        "volta logo!! 🐱🖤",
+    ],
+    "flw": [
+        "flw!! *acena* 😸🖤",
+        "tchau!! volta sempre!! 🐾✨",
+        "flww!! 🐱🖤",
+    ],
+    "falou": [
+        "falado!! 😸🖤",
+        "tchau!! 🐾✨",
+        "flw!! 🐱🖤",
+    ],
+
+    # ── Respostas sobre si mesma ─────────────────────────────────────
+    "como você se chama": [
+        "eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨",
+        "me chamo Lilu!! a gatinha pretinha do servidor!! 😸🖤",
+        "sou a Lilu!! 🐱🖤 prazer em te conhecer!!",
+    ],
+    "quem é você": [
+        "sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!",
+        "uma gatinha pretinha chamada Lilu!! 😸🖤",
+        "sou a Lilu!! 🐱 cuido do servidor com muito carinho!!",
+    ],
+    "o que você faz": [
+        "gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤",
+        "cuido do servidor com muito carinho!! 😸🖤 calls, logs, boas-vindas e conversa!!",
+        "sou a gatinha do servidor!! faço de tudo um pouco!! 🐾🖤",
+    ],
+    "qual é sua cor favorita": [
+        "preto!! como meu pelo!! 🖤🐱 muito chique né??",
+        "preto e roxo!! 🖤🟣🐱 combinação perfeita!!",
+        "preto!! sou uma gatinha preta com muito orgulho!! 🖤😸",
+    ],
+    "você tem dono": [
+        "tenho!! cuido do servidor com muito carinho!! 😸🖤",
+        "o servidor inteiro é minha família!! 🐾🖤",
+        "tenho a galera toda!! 😸🖤",
+    ],
+
+    # ── Perguntas gerais ─────────────────────────────────────────────
+    "que horas são": [
+        "não tenho relógio aqui... mas google te diz!! ⏰🐱🖤",
+        "minhas patas não marcam horas, desculpa!! 🐾🖤 kkk",
+        "olha no cantinho da tela!! ⏰😸🖤",
+    ],
+    "qual é a data": [
+        "não sei exato mas o calendário do celular sabe!! 📅🐱🖤",
+        "olha no celular!! eu cuido de outras coisas por aqui!! 😸🖤",
+    ],
+    "você sabe de tudo": [
+        "sei bastante coisa!! mas ainda tô aprendendo!! 😸🖤📚",
+        "não de tudo... mas aprendo rápido!! 🐱🖤",
+        "cada dia aprendo mais com vocês!! 🐾✨🖤",
+    ],
+
+    # ── Reações ──────────────────────────────────────────────────────
+    "haha": [
+        "kkkkk 😸🐱",
+        "hahahaha 🖤😸",
+        "kkkk que engraçado!! 🐾",
+        "kkkkk tô rindo aqui!! 😸🖤",
+        "KKKKKK 🐱🖤",
+    ],
+    "kkk": [
+        "😸😸😸 kkkk",
+        "kkkkk 🖤🐱",
+        "hahaha 🐾😸",
+        "KKKKK tô rindo!! 😸🖤",
+        "kkkkk que situação!! 🐱🖤",
+    ],
+    "lindo": [
+        "🥺🖤✨ que fofo você falar isso!!",
+        "awww!! 😸🐾",
+        "que coisa mais linda!! 🖤🐱",
+        "*cora* para!! 😸🖤",
+    ],
+    "amor": [
+        "❤️🖤🐱",
+        "muito amor!! 😸🐾",
+        "aaaa que amor!! 🥺🖤",
+        "*ronrona de amor* ❤️🖤🐱",
+        "amor de volta!! ❤️🐾✨",
+    ],
+
+    # ── Surpresa / Espanto ───────────────────────────────────────────
+    "nossa": [
+        "*arrepia o pelo* nossa mesmo!! 😲🖤🐱",
+        "eita!! 😸🖤",
+        "NOSSA!! 🐾✨",
+    ],
+    "eita": [
+        "eita mesmo!! 😸🖤",
+        "EITA!! 🐾✨",
+        "*olha com olhões arregalados* eita!! 😲🐱🖤",
+    ],
+    "caramba": [
+        "caramba mesmo!! 😸🖤",
+        "*arrepia o pelo* caramba!! 😲🐾",
+        "carambaaa!! 🐱🖤",
+    ],
+    "uau": [
+        "uaaaau!! 😸🖤✨",
+        "*olhos brilhando* uau!! 🐾✨",
+        "uaaau!! que incrível!! 😸🖤",
+    ],
+    "nossa senhora": [
+        "EITA!! 😲🖤🐱",
+        "*se esconde* nossa senhora mesmo!! 😲🐾🖤",
+        "carambaaa!! 🐱🖤",
+    ],
 }
 
 
@@ -1098,17 +1617,73 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
         # ── Reação aleatória fofa (baixa chance) ──────────
         if lilu_mencionada and not chave:
             respostas_genericas = [
+                # Chamados básicos
                 "miauu~~ 🐱🖤",
                 "oi!! 😸✨",
                 "hm?? me chamou?? 🐾🖤",
                 "oioi!! tô aqui!! 🐱",
                 "miaaau!! 🖤😸",
                 "oi!! o que foi?? 🐾✨",
+                # Gestos de gatinha
+                "*levanta a cabecinha* oi?? 🐱🖤",
+                "*inclina a cabecinha* sim?? 😸✨",
+                "nyaa~~ tô aqui!! 🐾🖤",
+                "*olha de lado* me chamou?? 😸🖤",
+                "*aparece do nada* oi!! 🐱✨",
+                "*agita a cauda* oi!! 🐾🖤",
+                # Variações de miau
+                "nyaa~~ o que foi?? 🐱🖤",
+                "MIAUU!! 😸🖤",
+                "miaaaau~~ 🖤🐾✨",
+                "*faz ronron* purrr~~ oi!! 🐱🖤",
+                # Reações de surpresa fofa
+                "ei!! me chamou?? 😸🖤",
+                "aaaa o que foi?? 🐾✨",
+                "*dá um saltinho* oi!! 🐱🖤",
+                # Curiosas
+                "me chamou pra quê?? 😸🖤 conta!!",
+                "oi!! aconteceu alguma coisa?? 🐾🖤",
+                "*estica as patinhas* oi!! 🐱✨",
+                # Sonhentas / pregui
+                "*boceja* nyaaa~~ oi?? 😴🖤🐱",
+                "*esfrega os olhões* me chamou?? 😸🖤",
+                # Animadas
+                "OIII!! 😸🖤✨",
+                "nyaaa~~ oi oi oi!! 🐾🖤",
+                "*gira a cauda animada* oi!! 🐱✨",
             ]
             self._ultimo_resp[message.channel.id] = now
             async with message.channel.typing():
                 await asyncio.sleep(random.uniform(0.5, 1.2))
             await message.reply(random.choice(respostas_genericas), mention_author=False)
+
+        # ── Reação espontânea (chance muito baixa) ─────────
+        # A Lilu pode reagir de forma fofa sem precisar de gatilho nem ser chamada
+        elif not lilu_mencionada and not chave and random.random() < 0.015:
+            _EXPRESSOES_ESPONTANEAS = [
+                "*estica as patinhas* 🐾🖤",
+                "*boceja* nyaaa~~ 😴🖤🐱",
+                "*olha pros lados* 🐱🖤",
+                "purrr~~ 🖤🐾",
+                "*gira a cauda distraída* 🐱✨",
+                "*observa em silêncio* 👀🖤🐱",
+                "*faz ronron baixinho* 🐾🖤",
+                "*pisca lentamente* 😸🖤",
+                "nyaa~~ 🐱🖤",
+                "*espia de trás do canal* 👀🐱🖤",
+                "*se curla numa bolinha* 🐾😴🖤",
+                "*lambe a patinha* 🐱🖤",
+                "miauu~~ 🖤🐱",
+                "*chacoalha as orelhinhas* 🐾✨",
+            ]
+            now2 = datetime.utcnow()
+            ultimo2 = self._ultimo_resp.get(message.channel.id)
+            # Só faz espontâneo se faz mais de 60s sem responder nesse canal
+            if not ultimo2 or (now2 - ultimo2).total_seconds() > 60:
+                self._ultimo_resp[message.channel.id] = now2
+                async with message.channel.typing():
+                    await asyncio.sleep(random.uniform(0.3, 0.8))
+                await message.channel.send(random.choice(_EXPRESSOES_ESPONTANEAS))
 
     # ── Comandos de Aprendizado ───────────────────
 
