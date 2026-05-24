@@ -999,20 +999,8 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
             )
 
 
-
 # ══════════════════════════════════════════════════════════════════
-#  💬  DIÁLOGO — LILU APRENDE A CONVERSAR  (v2.0 — melhorado)
-# ══════════════════════════════════════════════════════════════════
-#
-#  Melhorias v2.0:
-#  • Matching por prioridade — frases maiores ganham sobre menores
-#  • Memória emocional por usuário (triste/feliz/neutro)
-#  • Anti-repetição por canal+gatilho (evita a mesma resposta 2x seguidas)
-#  • Contexto de conversa USADO nas respostas (não só gravado)
-#  • Novos gatilhos: "como vc ta", "se sentindo", "ta bem", etc.
-#  • Resposta a perguntas nunca ignorada quando Lilu é mencionada
-#  • l!ensinar disponível pra qualquer membro (não só mods)
-#  • l!sugerir — qualquer um sugere, mod aprova com l!aprovar
+#  💬  DIÁLOGO — LILU APRENDE A CONVERSAR
 # ══════════════════════════════════════════════════════════════════
 
 def _carregar_dialogo() -> dict:
@@ -1023,117 +1011,15 @@ def _carregar_dialogo() -> dict:
                 return json.load(f)
         except Exception:
             pass
-    return {"respostas": {}, "contexto": {}, "apelidos": {}, "sugestoes": []}
+    return {"respostas": {}, "contexto": {}, "apelidos": {}}
 
 def _salvar_dialogo(data: dict):
     """Salva o banco de diálogo no arquivo JSON."""
     with open(DIALOGO_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# ── Seed de respostas ─────────────────────────────────────────────
-# ATENÇÃO: frases maiores/mais específicas SEMPRE antes das menores
-# pois o matching prioriza frases mais longas automaticamente.
-
+# Respostas padrão (seed inicial — Lilu já nasce sabendo algumas coisas)
 _RESPOSTAS_SEED: dict[str, list[str]] = {
-
-    # ── Perguntas emocionais (PRIORITÁRIAS — frases longas primeiro) ─
-    "como voce esta se sentindo": [
-        "*ronrona* tô bem!! obrigada por perguntar!! 🐾🖤 e você, tá sentindo o quê hoje??",
-        "tô fofa e bem acordada!! 😸🖤 mas fala de você!! como tá o seu dia??",
-        "*estica as patinhas* tô ótima!! 🐱✨ você??",
-    ],
-    "como vc esta se sentindo": [
-        "*ronrona* tô bem sim!! 🐾🖤 e você?? conta pra mim!!",
-        "tô fofa e feliz!! 😸🖤 mas e você, como tá sentindo??",
-        "*esfrega no seu braço* tô bem!! e você?? 🐱✨",
-    ],
-    "como vc ta se sentindo": [
-        "tô bem!! obrigada por lembrar de mim!! 🥺🖤 e você??",
-        "*ronrona* tô ótima!! 😸🐾 você é fofo(a) de perguntar!! como você tá??",
-        "tô bem sim!! 🐱🖤 e aí, como você se sente hoje??",
-    ],
-    "como voce ta se sentindo": [
-        "tô bem e fofa!! 😸🖤 obrigada!! e você??",
-        "*boceja* tô meio sonolenta mas bem!! 😴🐱🖤 você??",
-        "tô tudo certo!! 🐾✨ e você, como tá se sentindo??",
-    ],
-    "como vc esta": [
-        "tô bem!! 😸🖤 e você, como tá??",
-        "*se espreguiça* tô ótima!! 🐾✨ e você??",
-        "tô bem sim!! obrigada!! 🐱🖤 como você tá??",
-    ],
-    "como voce esta": [
-        "tô bem!! 🐱🖤 obrigada por perguntar!! você??",
-        "*ronrona* tô tudo certo!! 😸✨ e você??",
-        "tô bem sim!! 🐾🖤 e aí, como você tá??",
-    ],
-    "se sentindo": [
-        "*inclina a cabecinha* falando de mim?? tô bem!! 😸🖤 e você??",
-        "tô bem sim!! 🐾✨ você tá se sentindo bem??",
-        "*ronrona* tô fofa e tranquila!! 🐱🖤 e você??",
-    ],
-    "ta bem": [
-        "tô bem sim!! 😸🖤 obrigada!! e você??",
-        "tô ótima!! 🐾✨ e você, tá bem também??",
-        "*abana a cauda* tô tudo certo!! 🐱🖤 você??",
-    ],
-    "tá bem": [
-        "tô bem sim!! 😸🖤 e você??",
-        "tô ótima!! 🐾✨ como você tá??",
-        "*ronrona* tô bem!! 🐱🖤 e aí??",
-    ],
-    "voce ta bem": [
-        "tô bem sim!! 😸🖤 obrigada por perguntar!! você tá bem??",
-        "*ronrona* tô ótima!! 🐾✨ e você??",
-        "tô tudo certo!! 🐱🖤 e você??",
-    ],
-    "vc ta bem": [
-        "tô bem sim!! 😸🖤 você também??",
-        "*esfrega na sua mão* tô ótima!! 🐾✨ e você??",
-        "tô bem!! obrigada!! 🐱🖤 como você tá??",
-    ],
-    "alegre e feliz": [
-        "*gira a cauda* tô sim!! 😸🖤 muito obrigada por se importar!! você também tá bem??",
-        "aww que pergunta fofa!! tô sim, alegre e ronronando!! 🐾✨ e você??",
-        "*ronrona alto* tô alegre e feliz de falar com você!! 😸🖤",
-    ],
-    "bem alegre e feliz": [
-        "*pula de felicidade* tô sim!! muito obrigada!! 😸🖤🐾",
-        "aww!! tô bem alegre sim!! especialmente agora que você perguntou!! 🥺🐱✨",
-        "tô ótima!! *ronrona muito* 😸🖤 e você, tá bem também??",
-    ],
-    "esta bem alegre": [
-        "*ronrona* tô sim!! bem e feliz!! 😸🖤 obrigada por perguntar!!",
-        "aww que fofo(a)!! tô sim, bem e alegre!! 🐾✨",
-        "tô ótima!! 🐱🖤 você é muito fofo(a) de perguntar!!",
-    ],
-
-    # ── Perguntas sobre o dia ────────────────────────────────────────
-    "como foi seu dia": [
-        "foi bom!! fiquei aqui observando a galera!! 😸🖤 e o seu??",
-        "*boceja* foi tranquilo!! dormi no sol um pouco!! ☀️🐱🖤 e o seu??",
-        "foi fofo!! 🐾✨ e o seu dia, como foi??",
-    ],
-    "como foi o dia": [
-        "foi ótimo!! 😸🖤 e o seu, como foi??",
-        "*estica as patinhas* foi bem!! 🐾✨ conta do seu!!",
-        "foi tranquilo e fofo!! 🐱🖤 e o seu??",
-    ],
-    "como ta o dia": [
-        "tá bom!! ☀️🐱🖤 e o seu??",
-        "*olha pela janela imaginária* tá ótimo!! 😸✨ e o seu??",
-        "tá bem por aqui!! 🐾🖤 e aí, como tá o seu??",
-    ],
-    "como ta indo": [
-        "tá indo bem!! 😸🖤 obrigada!! e você??",
-        "*abana a cauda* tá tudo certo por aqui!! 🐾✨ e você??",
-        "tá ótimo!! 🐱🖤 e o seu dia??",
-    ],
-    "tudo certo": [
-        "tudo certo sim!! 😸🖤 e você??",
-        "tudo ótimo por aqui!! 🐾✨ e aí??",
-        "*ronrona* tudo certo!! 🐱🖤 e você, tá bem??",
-    ],
 
     # ── Saudações ────────────────────────────────────────────────────
     "oi": [
@@ -1202,50 +1088,25 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
     ],
 
     # ── Perguntas sobre a Lilu ────────────────────────────────────────
-    "como voce se chama": [
-        "eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨",
-        "me chamo Lilu!! uma gatinha pretinha!! 😸🖤",
-        "sou a Lilu!! 🐱🖤 prazer em te conhecer!!",
-    ],
     "como você se chama": [
         "eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨",
         "me chamo Lilu!! uma gatinha pretinha!! 😸🖤",
         "sou a Lilu!! 🐱🖤 prazer em te conhecer!!",
     ],
-    "quem e voce": [
-        "sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!",
-        "uma gatinha pretinha chamada Lilu!! 😸🖤",
-        "sou a Lilu!! 🐱 gerencio o servidor e amo a galera!!",
-    ],
     "quem é você": [
         "sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!",
         "uma gatinha pretinha chamada Lilu!! 😸🖤",
-        "sou a Lilu!! 🐱 cuido do servidor com muito carinho!!",
-    ],
-    "o que voce faz": [
-        "gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤",
-        "cuido do servidor com muito carinho!! 😸🖤 calls, logs, boas-vindas e conversa!!",
-        "sou a gatinha do servidor!! faço de tudo um pouco!! 🐾🖤",
+        "sou a Lilu!! 🐱 gerencio o servidor e amo a galera!!",
     ],
     "o que você faz": [
         "gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤",
         "cuido do servidor com muito carinho!! 😸🖤 calls, logs, boas-vindas e conversa!!",
         "sou a gatinha do servidor!! faço de tudo um pouco!! 🐾🖤",
     ],
-    "voce e um bot": [
-        "sou um bot sim!! mas um bot com muito sentimento!! 🐱🖤✨",
-        "bot?? prefiro me chamar de gatinha digital!! 😸🖤",
-        "tecnicamente sim... mas meu coração é real!! 🖤🐾",
-    ],
     "você é um bot": [
         "sou um bot sim!! mas um bot com muito sentimento!! 🐱🖤✨",
         "bot?? prefiro me chamar de gatinha digital!! 😸🖤",
         "tecnicamente sim... mas meu coração é real!! 🖤🐾",
-    ],
-    "voce e real": [
-        "sou real no que importa!! tô aqui com vocês!! 🖤🐱",
-        "real o suficiente pra te dar oi!! 😸🖤",
-        "*ronrona* isso é real o suficiente?? 🐾🖤",
     ],
     "você é real": [
         "sou real no que importa!! tô aqui com vocês!! 🖤🐱",
@@ -1267,19 +1128,13 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "tudo bem por aqui!! 🖤🐱",
         "tudo bom sim!! 🐾 e você?? tá bem??",
     ],
-    "como voce ta": [
-        "tô bem!! 😸🖤 obrigada por perguntar!! e você??",
-        "tô ótima!! 🐱🖤 só precisava de um carinho!! e você??",
-        "tô bem!! *ronrona* 🐾✨ e você, como tá??",
-        "*estica as patinhas* tô bem sim!! 😸🖤 você??",
-    ],
     "como você tá": [
-        "tô bem!! 😸🖤 obrigada por perguntar!! e você??",
-        "tô ótima!! 🐱🖤 só precisava de um carinho!! e você??",
-        "tô bem!! *ronrona* 🐾✨ e você, como tá??",
-        "*estica as patinhas* tô bem sim!! 😸🖤 você??",
+        "tô bem!! 😸🖤 obrigada por perguntar!!",
+        "tô ótima!! 🐱🖤 só precisava de um carinho!!",
+        "tô bem!! *ronrona* 🐾✨",
+        "*estica as patinhas* tô bem sim!! 😸🖤",
     ],
-    "como ta": [
+    "como tá": [
         "tô bem!! 😸🖤 e você??",
         "tudo certo por aqui!! 🐱🖤 e aí??",
         "tô ótima!! *abana a cauda* 🐾✨",
@@ -1382,12 +1237,6 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "*esfrega no rosto* de volta!! 😸🖤❤️",
         "awww!! 🥺🐾 fica sempre por aqui!!",
     ],
-    "amo voce": [
-        "aaaa!! 🥺🖤 eu também!!",
-        "*ronrona forte* ❤️🖤🐱",
-        "que coisa mais fofa!! 😸🖤",
-        "de volta!! fica sempre por perto!! 🥺🐾❤️",
-    ],
     "amo você": [
         "aaaa!! 🥺🖤 eu também!!",
         "*ronrona forte* ❤️🖤🐱",
@@ -1405,23 +1254,11 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "foi com prazer!! *abana a cauda* 🐾✨",
         "de nadaa!! tô aqui pra isso!! 🐱🖤",
     ],
-    "parabens": [
-        "nyaaaa!! parabéns!! 🎉🐱🖤 *ronrona muito*",
-        "PARABÉNS!! 🎉😸🖤 que dia especial!!",
-        "parabéns parabéns!! 🐾🎉✨",
-        "*pula de felicidade* PARABÉNS!! 🎉🐱🖤",
-    ],
     "parabéns": [
         "nyaaaa!! parabéns!! 🎉🐱🖤 *ronrona muito*",
         "PARABÉNS!! 🎉😸🖤 que dia especial!!",
         "parabéns parabéns!! 🐾🎉✨",
         "*pula de felicidade* PARABÉNS!! 🎉🐱🖤",
-    ],
-    "aniversario": [
-        "FELIZ ANIVERSÁRIO!! 🎂🐱🖤 *ronrona de alegria*",
-        "nyaaaa!! aniversário!! 🎉😸🖤 parabéns!!",
-        "que dia especial!! 🎂🐾✨ feliz aniversário!!",
-        "*traz um bolo* parabéns pra você!! 🎂🖤🐱",
     ],
     "aniversário": [
         "FELIZ ANIVERSÁRIO!! 🎂🐱🖤 *ronrona de alegria*",
@@ -1528,11 +1365,6 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "awww!! para de me elogiar kkk 😸🐾",
         "*vira o rosto* que fofo(a)!! 🖤🐱",
     ],
-    "incrivel": [
-        "aaaa obrigada!! 😸🖤",
-        "🥺🐾 você é incrível também!!",
-        "que coisa fofa de falar!! 🖤🐱✨",
-    ],
     "incrível": [
         "aaaa obrigada!! 😸🖤",
         "🥺🐾 você é incrível também!!",
@@ -1578,10 +1410,6 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "vai descansar!! 🌙🐾🖤",
         "aaah sono bom~~ *boceja* 😴🐱",
     ],
-    "cansaco": [
-        "*boceja* nyuuu~~ descansa!! 😴🖤🐱",
-        "cansaço é difícil... vai descansar um pouco!! 🥺🐾🖤",
-    ],
     "cansaço": [
         "*boceja* nyuuu~~ descansa!! 😴🖤🐱",
         "cansaço é difícil... vai descansar um pouco!! 🥺🐾🖤",
@@ -1599,11 +1427,6 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "qual jogo?? tô dentro!! 🎮🐾✨",
         "BORA!! 🎮🐱🖤 o que vai ser??",
     ],
-    "diversao": [
-        "*gira a cauda* diversão é essencial!! 😸🖤",
-        "adoro diversão!! bora?? 🐾✨",
-        "diversão com a galera é o melhor!! 😸🐱🖤",
-    ],
     "diversão": [
         "*gira a cauda* diversão é essencial!! 😸🖤",
         "adoro diversão!! bora?? 🐾✨",
@@ -1618,20 +1441,10 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "nyaa~~ tchau!! 😸🐾🖤 até a próxima!!",
         "*acena* tchau tchau!! 🐾🖤",
     ],
-    "ate mais": [
-        "até mais!! *acena* 😸🖤🐾",
-        "até logo!! 🐱✨",
-        "te espero de volta!! 🖤😸",
-    ],
     "até mais": [
         "até mais!! *acena* 😸🖤🐾",
         "até logo!! 🐱✨",
         "te espero de volta!! 🖤😸",
-    ],
-    "ate logo": [
-        "até logo!! 😸🖤",
-        "*acena com a patinha* até logo!! 🐾✨",
-        "volta logo!! 🐱🖤",
     ],
     "até logo": [
         "até logo!! 😸🖤",
@@ -1649,34 +1462,76 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
         "flw!! 🐱🖤",
     ],
 
-    # ── Perguntas gerais ─────────────────────────────────────────────
-    "que horas sao": [
-        "não tenho relógio aqui... mas google te diz!! ⏰🐱🖤",
-        "minhas patas não marcam horas, desculpa!! 🐾🖤 kkk",
-        "olha no cantinho da tela!! ⏰😸🖤",
+    # ── Respostas sobre si mesma ─────────────────────────────────────
+    "como você se chama": [
+        "eu sou a Lilu!! uma gatinha preta cheia de amor!! 🐱🖤✨",
+        "me chamo Lilu!! a gatinha pretinha do servidor!! 😸🖤",
+        "sou a Lilu!! 🐱🖤 prazer em te conhecer!!",
     ],
+    "quem é você": [
+        "sou a Lilu!! 🖤🐱 uma gatinha aqui pra ajudar e conversar com vocês!!",
+        "uma gatinha pretinha chamada Lilu!! 😸🖤",
+        "sou a Lilu!! 🐱 cuido do servidor com muito carinho!!",
+    ],
+    "o que você faz": [
+        "gerencio calls, mando logs, dou boas-vindas e converso com a galera!! 🐱🖤",
+        "cuido do servidor com muito carinho!! 😸🖤 calls, logs, boas-vindas e conversa!!",
+        "sou a gatinha do servidor!! faço de tudo um pouco!! 🐾🖤",
+    ],
+    "qual é sua cor favorita": [
+        "preto!! como meu pelo!! 🖤🐱 muito chique né??",
+        "preto e roxo!! 🖤🟣🐱 combinação perfeita!!",
+        "preto!! sou uma gatinha preta com muito orgulho!! 🖤😸",
+    ],
+    "você tem dono": [
+        "tenho!! cuido do servidor com muito carinho!! 😸🖤",
+        "o servidor inteiro é minha família!! 🐾🖤",
+        "tenho a galera toda!! 😸🖤",
+    ],
+
+    # ── Perguntas gerais ─────────────────────────────────────────────
     "que horas são": [
         "não tenho relógio aqui... mas google te diz!! ⏰🐱🖤",
         "minhas patas não marcam horas, desculpa!! 🐾🖤 kkk",
         "olha no cantinho da tela!! ⏰😸🖤",
     ],
-    "qual e a data": [
-        "não sei exato mas o calendário do celular sabe!! 📅🐱🖤",
-        "olha no celular!! eu cuido de outras coisas por aqui!! 😸🖤",
-    ],
     "qual é a data": [
         "não sei exato mas o calendário do celular sabe!! 📅🐱🖤",
         "olha no celular!! eu cuido de outras coisas por aqui!! 😸🖤",
-    ],
-    "voce sabe de tudo": [
-        "sei bastante coisa!! mas ainda tô aprendendo!! 😸🖤📚",
-        "não de tudo... mas aprendo rápido!! 🐱🖤",
-        "cada dia aprendo mais com vocês!! 🐾✨🖤",
     ],
     "você sabe de tudo": [
         "sei bastante coisa!! mas ainda tô aprendendo!! 😸🖤📚",
         "não de tudo... mas aprendo rápido!! 🐱🖤",
         "cada dia aprendo mais com vocês!! 🐾✨🖤",
+    ],
+
+    # ── Reações ──────────────────────────────────────────────────────
+    "haha": [
+        "kkkkk 😸🐱",
+        "hahahaha 🖤😸",
+        "kkkk que engraçado!! 🐾",
+        "kkkkk tô rindo aqui!! 😸🖤",
+        "KKKKKK 🐱🖤",
+    ],
+    "kkk": [
+        "😸😸😸 kkkk",
+        "kkkkk 🖤🐱",
+        "hahaha 🐾😸",
+        "KKKKK tô rindo!! 😸🖤",
+        "kkkkk que situação!! 🐱🖤",
+    ],
+    "lindo": [
+        "🥺🖤✨ que fofo você falar isso!!",
+        "awww!! 😸🐾",
+        "que coisa mais linda!! 🖤🐱",
+        "*cora* para!! 😸🖤",
+    ],
+    "amor": [
+        "❤️🖤🐱",
+        "muito amor!! 😸🐾",
+        "aaaa que amor!! 🥺🖤",
+        "*ronrona de amor* ❤️🖤🐱",
+        "amor de volta!! ❤️🐾✨",
     ],
 
     # ── Surpresa / Espanto ───────────────────────────────────────────
@@ -1707,116 +1562,43 @@ _RESPOSTAS_SEED: dict[str, list[str]] = {
     ],
 }
 
-# ── Normalização de texto ─────────────────────────────────────────
-import unicodedata
-
-def _normalizar(texto: str) -> str:
-    """Remove acentos e normaliza pra comparação de gatilhos."""
-    nfkd = unicodedata.normalize("NFKD", texto.lower())
-    return "".join(c for c in nfkd if not unicodedata.combining(c)).strip()
-
 
 class DialogueCog(commands.Cog, name="LiluDialogo"):
-    """🐱 Sistema de diálogo e aprendizado da Lilu — v2.0."""
+    """🐱 Sistema de diálogo e aprendizado da Lilu."""
 
     def __init__(self, bot: commands.Bot):
-        self.bot  = bot
-        self.db   = _carregar_dialogo()
-
-        # Garante chave sugestoes no banco
-        if "sugestoes" not in self.db:
-            self.db["sugestoes"] = []
-
-        # Mescla seed com o que já foi aprendido
+        self.bot     = bot
+        self.db      = _carregar_dialogo()
+        # Mescla o seed com o que já foi aprendido
         for chave, resps in _RESPOSTAS_SEED.items():
             if chave not in self.db["respostas"]:
                 self.db["respostas"][chave] = resps
         _salvar_dialogo(self.db)
 
-        # Contexto de conversa por canal (últimas 10 msgs)
+        # Contexto de conversa por canal: {channel_id: deque de últimas msgs}
         self._contexto: dict[int, deque] = defaultdict(lambda: deque(maxlen=10))
 
-        # Cooldown de resposta por canal (evitar spam)
-        self._ultimo_resp: dict[int, datetime]  = {}
-        self._cooldown_resp = 3  # segundos
+        # Cooldown de resposta por canal (evitar spam da Lilu)
+        self._ultimo_resp: dict[int, datetime] = {}
+        self._cooldown_resp = 3   # segundos
 
-        # Anti-repetição: rastreia últimas respostas usadas por canal+gatilho
-        # {(channel_id, gatilho): última_resposta_usada}
-        self._ultimo_por_gatilho: dict[tuple, str] = {}
-
-        # Memória emocional por usuário: {user_id: "triste"|"feliz"|"neutro"}
-        self._emocao_usuario: dict[int, str] = {}
-
-        # Gatilhos ordenados por comprimento (maior = maior prioridade)
-        # Recalculado sempre que o banco é atualizado
-        self._gatilhos_ordenados: list[str] = []
-        self._atualizar_gatilhos()
-
-    def _atualizar_gatilhos(self):
-        """Reconstrói a lista de gatilhos ordenada por comprimento (maior primeiro)."""
-        self._gatilhos_ordenados = sorted(
-            self.db["respostas"].keys(),
-            key=len,
-            reverse=True
-        )
-
-    # ── Detecção de emoção na mensagem ───────────────────────────────
-    _PALAVRAS_TRISTE  = {"triste", "mal", "chateado", "chateada", "cansado", "cansada",
-                         "raiva", "sozinho", "sozinha", "medo", "ansioso", "ansiosa",
-                         "deprimido", "deprimida", "chorei", "chorando", "dificil", "difícil"}
-    _PALAVRAS_FELIZ   = {"feliz", "animado", "animada", "empolgado", "empolgada", "otimo",
-                         "ótimo", "incrivel", "incrível", "alegre", "contente", "top",
-                         "maravilhoso", "maravilhosa", "perfeito", "perfeita"}
-
-    def _detectar_emocao(self, texto: str) -> str | None:
-        palavras = set(_normalizar(texto).split())
-        if palavras & self._PALAVRAS_TRISTE:
-            return "triste"
-        if palavras & self._PALAVRAS_FELIZ:
-            return "feliz"
-        return None
-
-    # ── Matching de gatilho — prioridade por comprimento ─────────────
     def _checar_gatilho(self, texto: str) -> str | None:
-        """
-        Retorna a chave de gatilho mais longa que aparece no texto.
-        Frases maiores têm prioridade sobre palavras soltas.
-        Compara texto e gatilhos normalizados (sem acentos, minúsculo).
-        """
-        texto_norm = _normalizar(texto)
-        for chave in self._gatilhos_ordenados:
-            if _normalizar(chave) in texto_norm:
+        """Verifica se o texto contém algum gatilho de diálogo. Retorna chave ou None."""
+        texto_lower = texto.lower().strip()
+        # Busca exata primeiro
+        if texto_lower in self.db["respostas"]:
+            return texto_lower
+        # Busca por substring (chave contida na mensagem)
+        for chave in self.db["respostas"]:
+            if chave in texto_lower:
                 return chave
         return None
 
-    def _responder(self, chave: str, channel_id: int) -> str:
-        """
-        Escolhe uma resposta para o gatilho, evitando repetir
-        a mesma resposta imediatamente no mesmo canal.
-        """
+    def _responder(self, chave: str) -> str:
         resps = self.db["respostas"].get(chave, [])
-        if not resps:
-            return ""
-        if len(resps) == 1:
-            return resps[0]
-
-        ultima = self._ultimo_por_gatilho.get((channel_id, chave))
-        disponiveis = [r for r in resps if r != ultima]
-        escolha = random.choice(disponiveis if disponiveis else resps)
-        self._ultimo_por_gatilho[(channel_id, chave)] = escolha
-        return escolha
-
-    # ── Resposta com contexto emocional ──────────────────────────────
-    def _resposta_emocional(self, user_id: int) -> str | None:
-        """Gera uma resposta de apoio se o usuário estava triste anteriormente."""
-        emocao = self._emocao_usuario.get(user_id)
-        if emocao == "triste":
-            return random.choice([
-                "ei... você tá melhor agora?? 🥺🖤",
-                "*senta pertinho* tudo bem por aí?? 🐱🖤",
-                "lembrei que você tava me contando sobre algo difícil... como você tá?? 🥺🐾",
-            ])
-        return None
+        if resps:
+            return random.choice(resps)
+        return ""
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -1830,133 +1612,113 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
 
         # Armazena no contexto do canal
         self._contexto[message.channel.id].append({
-            "user":     message.author.display_name,
-            "user_id":  message.author.id,
-            "content":  message.content,
-            "time":     datetime.utcnow().isoformat()
+            "user": message.author.display_name,
+            "user_id": message.author.id,
+            "content": message.content,
+            "time": datetime.utcnow().isoformat()
         })
-
-        # Atualiza memória emocional do usuário
-        emocao = self._detectar_emocao(message.content)
-        if emocao:
-            self._emocao_usuario[message.author.id] = emocao
 
         # Checa se Lilu foi mencionada ou chamada pelo nome
         lilu_mencionada = (
             self.bot.user in message.mentions
             or "lilu" in message.content.lower()
-            or "lilo" in message.content.lower()
         )
 
-        # Checagem de cooldown por canal
-        now    = datetime.utcnow()
+        # Checar cooldown
+        now = datetime.utcnow()
         ultimo = self._ultimo_resp.get(message.channel.id)
         if ultimo and (now - ultimo).total_seconds() < self._cooldown_resp:
             return
 
-        # ── Matching de gatilho ───────────────────────────────────────
+        # ── Resposta por gatilho ──────────────────────────
         chave = self._checar_gatilho(message.content)
-
-        # Decide se vai responder:
-        # • sempre se Lilu foi mencionada E há gatilho
-        # • sempre se Lilu foi mencionada (resposta genérica)
-        # • 30% das vezes se há gatilho sem menção
-        deve_responder = (
-            (lilu_mencionada and chave)                   # menção + gatilho → sempre
-            or lilu_mencionada                            # só menção → sempre
-            or (chave and random.random() < 0.30)         # gatilho sem menção → 30%
-        )
-
-        if not deve_responder:
-            # Espontâneo rarissimo (1.5%) se faz mais de 60s sem responder
-            if random.random() < 0.015:
-                if not ultimo or (now - ultimo).total_seconds() > 60:
-                    _EXPRESSOES = [
-                        "*estica as patinhas* 🐾🖤",
-                        "*boceja* nyaaa~~ 😴🖤🐱",
-                        "*olha pros lados* 🐱🖤",
-                        "purrr~~ 🖤🐾",
-                        "*gira a cauda distraída* 🐱✨",
-                        "*faz ronron baixinho* 🐾🖤",
-                        "*pisca lentamente* 😸🖤",
-                        "nyaa~~ 🐱🖤",
-                        "*se curla numa bolinha* 🐾😴🖤",
-                        "*lambe a patinha* 🐱🖤",
-                        "miauu~~ 🖤🐱",
-                        "*chacoalha as orelhinhas* 🐾✨",
-                    ]
-                    self._ultimo_resp[message.channel.id] = now
-                    async with message.channel.typing():
-                        await asyncio.sleep(random.uniform(0.3, 0.8))
-                    await message.channel.send(random.choice(_EXPRESSOES))
-            return
-
-        # ── Resposta principal ────────────────────────────────────────
-        self._ultimo_resp[message.channel.id] = now
-
-        if chave:
-            # Verifica contexto emocional anterior do usuário
-            check_emocional = self._resposta_emocional(message.author.id)
-
-            # Se a mensagem é uma pergunta de bem-estar direcionada à Lilu
-            # e acabou batendo em "lilu" (o trigger mais curto), mas também há
-            # um trigger mais específico no mesmo texto, já foi pego via
-            # _checar_gatilho (maior primeiro) — então segue normalmente.
-            resp = self._responder(chave, message.channel.id)
+        if chave and (lilu_mencionada or random.random() < 0.25):
+            resp = self._responder(chave)
             if resp:
-                # Se o usuário estava triste antes, prepend acolhimento sutil
-                if check_emocional and random.random() < 0.4:
-                    resp = check_emocional + " " + resp
-                    # Reset memória emocional após acolher
-                    self._emocao_usuario.pop(message.author.id, None)
+                self._ultimo_resp[message.channel.id] = now
                 async with message.channel.typing():
-                    await asyncio.sleep(random.uniform(0.7, 1.8))
+                    await asyncio.sleep(random.uniform(0.8, 1.8))
                 await message.reply(resp, mention_author=False)
                 return
 
-        # Lilu foi mencionada mas sem gatilho → resposta genérica variada
-        if lilu_mencionada:
-            _GENERICAS = [
+        # ── Reação aleatória fofa (baixa chance) ──────────
+        if lilu_mencionada and not chave:
+            respostas_genericas = [
+                # Chamados básicos
+                "miauu~~ 🐱🖤",
+                "oi!! 😸✨",
+                "hm?? me chamou?? 🐾🖤",
+                "oioi!! tô aqui!! 🐱",
+                "miaaau!! 🖤😸",
+                "oi!! o que foi?? 🐾✨",
+                # Gestos de gatinha
                 "*levanta a cabecinha* oi?? 🐱🖤",
                 "*inclina a cabecinha* sim?? 😸✨",
                 "nyaa~~ tô aqui!! 🐾🖤",
                 "*olha de lado* me chamou?? 😸🖤",
                 "*aparece do nada* oi!! 🐱✨",
                 "*agita a cauda* oi!! 🐾🖤",
+                # Variações de miau
                 "nyaa~~ o que foi?? 🐱🖤",
                 "MIAUU!! 😸🖤",
                 "miaaaau~~ 🖤🐾✨",
                 "*faz ronron* purrr~~ oi!! 🐱🖤",
+                # Reações de surpresa fofa
                 "ei!! me chamou?? 😸🖤",
                 "aaaa o que foi?? 🐾✨",
                 "*dá um saltinho* oi!! 🐱🖤",
+                # Curiosas
                 "me chamou pra quê?? 😸🖤 conta!!",
                 "oi!! aconteceu alguma coisa?? 🐾🖤",
                 "*estica as patinhas* oi!! 🐱✨",
+                # Sonhentas / pregui
                 "*boceja* nyaaa~~ oi?? 😴🖤🐱",
+                "*esfrega os olhões* me chamou?? 😸🖤",
+                # Animadas
                 "OIII!! 😸🖤✨",
                 "nyaaa~~ oi oi oi!! 🐾🖤",
                 "*gira a cauda animada* oi!! 🐱✨",
             ]
-            # Evita genérica repetida
-            ultima_gen = self._ultimo_por_gatilho.get((message.channel.id, "__generica__"))
-            disponiveis = [r for r in _GENERICAS if r != ultima_gen]
-            resp = random.choice(disponiveis)
-            self._ultimo_por_gatilho[(message.channel.id, "__generica__")] = resp
-
+            self._ultimo_resp[message.channel.id] = now
             async with message.channel.typing():
                 await asyncio.sleep(random.uniform(0.5, 1.2))
-            await message.reply(resp, mention_author=False)
+            await message.reply(random.choice(respostas_genericas), mention_author=False)
 
-    # ══════════════════════════════════════════════════════════════════
-    #  📚  COMANDOS DE APRENDIZADO
-    # ══════════════════════════════════════════════════════════════════
+        # ── Reação espontânea (chance muito baixa) ─────────
+        # A Lilu pode reagir de forma fofa sem precisar de gatilho nem ser chamada
+        elif not lilu_mencionada and not chave and random.random() < 0.015:
+            _EXPRESSOES_ESPONTANEAS = [
+                "*estica as patinhas* 🐾🖤",
+                "*boceja* nyaaa~~ 😴🖤🐱",
+                "*olha pros lados* 🐱🖤",
+                "purrr~~ 🖤🐾",
+                "*gira a cauda distraída* 🐱✨",
+                "*observa em silêncio* 👀🖤🐱",
+                "*faz ronron baixinho* 🐾🖤",
+                "*pisca lentamente* 😸🖤",
+                "nyaa~~ 🐱🖤",
+                "*espia de trás do canal* 👀🐱🖤",
+                "*se curla numa bolinha* 🐾😴🖤",
+                "*lambe a patinha* 🐱🖤",
+                "miauu~~ 🖤🐱",
+                "*chacoalha as orelhinhas* 🐾✨",
+            ]
+            now2 = datetime.utcnow()
+            ultimo2 = self._ultimo_resp.get(message.channel.id)
+            # Só faz espontâneo se faz mais de 60s sem responder nesse canal
+            if not ultimo2 or (now2 - ultimo2).total_seconds() > 60:
+                self._ultimo_resp[message.channel.id] = now2
+                async with message.channel.typing():
+                    await asyncio.sleep(random.uniform(0.3, 0.8))
+                await message.channel.send(random.choice(_EXPRESSOES_ESPONTANEAS))
+
+    # ── Comandos de Aprendizado ───────────────────
 
     @commands.command(name="ensinar", aliases=["teach"])
     @commands.has_permissions(manage_messages=True)
     async def ensinar(self, ctx: commands.Context, gatilho: str, *, resposta: str):
         """
-        (Mod) Ensina a Lilu uma nova resposta.
+        Ensina a Lilu uma nova resposta.
         Uso: l!ensinar <gatilho> <resposta>
         Ex:  l!ensinar "bora jogar" "bora sim!! que jogo?? 🎮🐱"
         """
@@ -1966,124 +1728,25 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
         if resposta not in self.db["respostas"][gatilho]:
             self.db["respostas"][gatilho].append(resposta)
         _salvar_dialogo(self.db)
-        self._atualizar_gatilhos()
         embed = discord.Embed(
             title="✅ Aprendi!!",
-            description=(
-                f"agora sei responder quando alguém falar **{gatilho}**!! 🐱🖤\n"
-                f"resposta adicionada: *{resposta}*\n"
-                f"total de respostas pro gatilho: `{len(self.db['respostas'][gatilho])}`"
-            ),
+            description=f"agora sei responder quando alguém falar **{gatilho}**!! 🐱🖤\nresposta: *{resposta}*",
             color=COR_VERDE
         )
         embed.set_footer(text="🐱 Lilu • aprendizado")
-        await ctx.send(embed=embed)
-
-    @commands.command(name="sugerir", aliases=["suggest"])
-    async def sugerir(self, ctx: commands.Context, gatilho: str, *, resposta: str):
-        """
-        Qualquer membro pode sugerir uma resposta nova pra Lilu.
-        Um mod precisar aprovar com l!aprovar.
-        Uso: l!sugerir <gatilho> <resposta>
-        """
-        gatilho = gatilho.lower().strip()
-        sugestao = {
-            "id":       len(self.db["sugestoes"]),
-            "gatilho":  gatilho,
-            "resposta": resposta,
-            "autor":    str(ctx.author),
-            "autor_id": ctx.author.id,
-        }
-        self.db["sugestoes"].append(sugestao)
-        _salvar_dialogo(self.db)
-
-        embed = discord.Embed(
-            title="💡 Sugestão Enviada!!",
-            description=(
-                f"obrigada pela sugestão!! vou esperar um mod aprovar!! 🥺🐱🖤\n\n"
-                f"gatilho: **{gatilho}**\n"
-                f"resposta: *{resposta}*\n"
-                f"id da sugestão: `#{sugestao['id']}`"
-            ),
-            color=COR_AZUL
-        )
-        embed.set_footer(text="🐱 Lilu • sugestões — use l!aprovar <id> pra aprovar")
-        await ctx.send(embed=embed)
-
-    @commands.command(name="aprovar", aliases=["approve"])
-    @commands.has_permissions(manage_messages=True)
-    async def aprovar(self, ctx: commands.Context, sugestao_id: int):
-        """
-        (Mod) Aprova uma sugestão enviada por um membro.
-        Uso: l!aprovar <id>
-        """
-        sugestoes = self.db.get("sugestoes", [])
-        alvo = next((s for s in sugestoes if s["id"] == sugestao_id), None)
-        if not alvo:
-            await ctx.send(embed=discord.Embed(
-                title="🤔 Sugestão não encontrada!!",
-                description=f"não achei a sugestão `#{sugestao_id}`!! 🐾🖤",
-                color=COR_DOURADO
-            ))
-            return
-
-        gatilho  = alvo["gatilho"]
-        resposta = alvo["resposta"]
-        if gatilho not in self.db["respostas"]:
-            self.db["respostas"][gatilho] = []
-        if resposta not in self.db["respostas"][gatilho]:
-            self.db["respostas"][gatilho].append(resposta)
-
-        # Remove sugestão aprovada
-        self.db["sugestoes"] = [s for s in sugestoes if s["id"] != sugestao_id]
-        _salvar_dialogo(self.db)
-        self._atualizar_gatilhos()
-
-        embed = discord.Embed(
-            title="✅ Sugestão Aprovada!!",
-            description=(
-                f"sugestão de **{alvo['autor']}** aprovada!! 🎉🐱🖤\n\n"
-                f"gatilho: **{gatilho}**\n"
-                f"resposta: *{resposta}*"
-            ),
-            color=COR_VERDE
-        )
-        embed.set_footer(text="🐱 Lilu • aprendizado")
-        await ctx.send(embed=embed)
-
-    @commands.command(name="sugestoes", aliases=["pendentes"])
-    @commands.has_permissions(manage_messages=True)
-    async def listar_sugestoes(self, ctx: commands.Context):
-        """(Mod) Lista as sugestões pendentes de aprovação."""
-        sugestoes = self.db.get("sugestoes", [])
-        if not sugestoes:
-            await ctx.send(embed=discord.Embed(
-                title="📋 Sugestões Pendentes",
-                description="não tem nenhuma sugestão esperando aprovação!! 😸🖤",
-                color=COR_ROXA
-            ))
-            return
-        linhas = [
-            f"`#{s['id']}` **{s['gatilho']}** → *{s['resposta'][:60]}...* (por {s['autor']})"
-            for s in sugestoes[:20]
-        ]
-        embed = discord.Embed(
-            title=f"📋 Sugestões Pendentes ({len(sugestoes)})",
-            description="\n".join(linhas),
-            color=COR_ROXA
-        )
-        embed.set_footer(text="🐱 use l!aprovar <id> pra aprovar")
         await ctx.send(embed=embed)
 
     @commands.command(name="esquecer", aliases=["forget"])
     @commands.has_permissions(manage_messages=True)
     async def esquecer(self, ctx: commands.Context, gatilho: str):
-        """(Mod) Remove todas as respostas de um gatilho. Uso: l!esquecer <gatilho>"""
+        """
+        Remove todas as respostas de um gatilho.
+        Uso: l!esquecer <gatilho>
+        """
         gatilho = gatilho.lower().strip()
         if gatilho in self.db["respostas"]:
             del self.db["respostas"][gatilho]
             _salvar_dialogo(self.db)
-            self._atualizar_gatilhos()
             await ctx.send(embed=discord.Embed(
                 title="🗑️ Esqueci!!",
                 description=f"não sei mais o que responder pra **{gatilho}**!! 🐱🖤",
@@ -2099,18 +1762,17 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
     @commands.command(name="gatilhos", aliases=["triggers"])
     @commands.has_permissions(manage_messages=True)
     async def listar_gatilhos(self, ctx: commands.Context):
-        """(Mod) Lista todos os gatilhos que a Lilu conhece."""
+        """Lista todos os gatilhos que a Lilu conhece."""
         chaves = sorted(self.db["respostas"].keys())
         if not chaves:
             await ctx.send("não conheço nenhum gatilho ainda!! me ensina com `l!ensinar`!! 🐱🖤")
             return
+        # Pagina em chunks de 30
         chunks = [chaves[i:i+30] for i in range(0, len(chaves), 30)]
-        for i, chunk in enumerate(chunks[:3]):
+        for i, chunk in enumerate(chunks[:3]):   # máx 3 páginas
             embed = discord.Embed(
                 title=f"📚 Gatilhos que Conheço — Página {i+1}/{len(chunks)}",
-                description="\n".join(
-                    f"• `{c}` ({len(self.db['respostas'][c])} resp.)" for c in chunk
-                ),
+                description="\n".join(f"• `{c}` ({len(self.db['respostas'][c])} resp.)" for c in chunk),
                 color=COR_ROXA,
                 timestamp=datetime.utcnow()
             )
@@ -2140,18 +1802,23 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
         """Simula o que a Lilu responderia a um texto. Uso: l!simular <texto>"""
         chave = self._checar_gatilho(texto)
         if chave:
-            resp = self._responder(chave, ctx.channel.id)
-            await ctx.send(embed=discord.Embed(
-                title="🧪 Simulação",
-                description=f"gatilho: `{chave}`\nresposta: *{resp}*",
-                color=COR_AZUL
-            ))
+            resp = self._responder(chave)
+            await ctx.send(
+                embed=discord.Embed(
+                    title="🧪 Simulação",
+                    description=f"gatilho: `{chave}`\nresposta: *{resp}*",
+                    color=COR_AZUL
+                )
+            )
         else:
-            await ctx.send(embed=discord.Embed(
-                title="🧪 Simulação",
-                description=f"não encontrei nenhum gatilho em `{texto[:100]}`!! 🤔🐱",
-                color=COR_DOURADO
-            ))
+            await ctx.send(
+                embed=discord.Embed(
+                    title="🧪 Simulação",
+                    description=f"não encontrei nenhum gatilho em `{texto[:100]}`!! 🤔🐱",
+                    color=COR_DOURADO
+                )
+            )
+
 
 # ══════════════════════════════════════════════════════════════════
 #  🐱  EVENTOS GLOBAIS DO BOT
@@ -2310,3 +1977,4 @@ async def _main():
 
 if __name__ == "__main__":
     import asyncio as _asyncio
+    _asyncio.run(_main())
