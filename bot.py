@@ -72,7 +72,8 @@ VM_LOBBY_NAME    = "🔜 crie sua call ᓚᘏᗢ"
 VM_DEFAULT_NAME  = "🖤 Call da {user}"
 VM_DEFAULT_LIMIT = 0       # 0 = sem limite
 VM_EMPTY_DELAY   = 5       # segundos antes de deletar call vazia
-VM_CATEGORY_ID   = 1506779068216115402   # categoria onde o lobby e as calls serão criados
+VM_CATEGORY_ID        = 1506779068216115402   # categoria onde o lobby e as calls serão criados
+VM_PAINEL_CHANNEL_ID  = None                        # canal de texto onde o painel vai aparecer (None = auto)
 
 # Mensagens da Lilu no VoiceMaster
 _VM_MSGS = {
@@ -529,6 +530,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         self.bot = bot
         self.vm_channels: dict[int, dict] = {}   # channel_id → {owner, locked, hidden, permanent, banned}
         self.lobby_id: int | None = None           # ID do canal lobby atual
+        self.painel_channel_id: int | None = VM_PAINEL_CHANNEL_ID  # canal onde o painel aparece
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -580,12 +582,22 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
                 }
                 await member.move_to(novo, reason="Lilu VoiceMaster")
 
-                # Painel de controle em texto (pega primeiro canal de texto da categoria ou o primeiro do servidor)
+                # ── Acha o canal de texto pro painel ──────────────────────────
                 canal_texto = None
-                if categoria:
-                    canal_texto = next((c for c in categoria.text_channels), None)
+                # 1. Canal configurado manualmente
+                if self.painel_channel_id:
+                    canal_texto = guild.get_channel(self.painel_channel_id)
+                # 2. Primeiro canal de texto que o bot consegue falar (no servidor inteiro)
                 if not canal_texto:
-                    canal_texto = guild.system_channel or guild.text_channels[0]
+                    me = guild.me
+                    for tc in guild.text_channels:
+                        perms = tc.permissions_for(me)
+                        if perms.send_messages and perms.embed_links and perms.view_channel:
+                            canal_texto = tc
+                            break
+                # 3. System channel como último recurso
+                if not canal_texto:
+                    canal_texto = guild.system_channel
 
                 embed = discord.Embed(
                     title="🐾 Sua Call Está Pronta!!",
@@ -692,15 +704,34 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         except discord.Forbidden:
             await ctx.send(embed=_vm_erro("não tenho permissão pra criar canais!! 😢🐱"))
 
+    @vm_group.command(name="setpainel")
+    @commands.has_permissions(manage_channels=True)
+    async def vm_setpainel(self, ctx: commands.Context, canal: discord.TextChannel = None):
+        """Define o canal onde o painel da call aparece. Uso: l!vm setpainel #canal"""
+        if canal:
+            self.painel_channel_id = canal.id
+            await ctx.send(embed=_vm_ok(
+                "✅ Canal do Painel Definido!!",
+                f"agora o painel vai aparecer em {canal.mention} sempre que alguém criar uma call!! 🐱🖤"
+            ))
+        else:
+            self.painel_channel_id = None
+            await ctx.send(embed=_vm_ok(
+                "✅ Canal do Painel Resetado!!",
+                "vou escolher automaticamente o primeiro canal de texto disponível!! 🐱🖤"
+            ))
+
     @vm_group.command(name="info")
     @commands.has_permissions(manage_channels=True)
     async def vm_info(self, ctx: commands.Context):
         guild = ctx.guild
         lobby = guild.get_channel(self.lobby_id) if self.lobby_id else None
+        painel_ch = guild.get_channel(self.painel_channel_id) if self.painel_channel_id else None
         embed = discord.Embed(title="📊 Lilu VoiceMaster — Info", color=COR_ROXA, timestamp=datetime.utcnow())
-        embed.add_field(name="🎙️ Lobby",          value=lobby.mention if lobby else "❌ Não configurado", inline=True)
-        embed.add_field(name="📞 Calls Ativas",   value=f"`{len(self.vm_channels)}`", inline=True)
-        embed.add_field(name="⚙️ Delay Exclusão", value=f"`{VM_EMPTY_DELAY}s`", inline=True)
+        embed.add_field(name="🎙️ Lobby",           value=lobby.mention if lobby else "❌ Não configurado", inline=True)
+        embed.add_field(name="📞 Calls Ativas",    value=f"`{len(self.vm_channels)}`", inline=True)
+        embed.add_field(name="⚙️ Delay Exclusão",  value=f"`{VM_EMPTY_DELAY}s`", inline=True)
+        embed.add_field(name="💬 Canal do Painel", value=painel_ch.mention if painel_ch else "`auto`", inline=True)
         embed.set_footer(text="🐱 Lilu VoiceMaster")
         await ctx.send(embed=embed)
 
@@ -1259,6 +1290,7 @@ async def lilu_help(ctx: commands.Context):
         value=(
             "`l!vm setup [id_cat]` — configura o lobby de calls\n"
             "`l!vm reset [id_cat]` — recria o lobby\n"
+            "`l!vm setpainel #canal` — define onde o painel aparece\n"
             "`l!vm info` — mostra status do sistema\n"
             "*(use os botões do painel pra gerenciar sua call!!)*"
         )
