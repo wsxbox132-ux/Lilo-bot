@@ -582,27 +582,14 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
                 }
                 await member.move_to(novo, reason="Lilu VoiceMaster")
 
-                # ── Acha o canal de texto pro painel ──────────────────────────
-                canal_texto = None
-                # 1. Canal configurado manualmente
-                if self.painel_channel_id:
-                    canal_texto = guild.get_channel(self.painel_channel_id)
-                # 2. Primeiro canal de texto que o bot consegue falar (no servidor inteiro)
-                if not canal_texto:
-                    me = guild.me
-                    for tc in guild.text_channels:
-                        perms = tc.permissions_for(me)
-                        if perms.send_messages and perms.embed_links and perms.view_channel:
-                            canal_texto = tc
-                            break
-                # 3. System channel como último recurso
-                if not canal_texto:
-                    canal_texto = guild.system_channel
-
-                embed = discord.Embed(
+                # ── Painel: manda direto no chat do canal de voz criado ──────
+                # Canais de voz do Discord têm chat de texto integrado.
+                # Enviar em `novo` garante que o painel apareça DENTRO da call,
+                # sem sujar nenhum canal de texto aleatório do servidor.
+                embed_painel = discord.Embed(
                     title="🐾 Sua Call Está Pronta!!",
                     description=(
-                        f"oi {member.mention}!! criei a call **{nome}** pra você!! 🖤\n\n"
+                        f"oi {member.mention}!! criei essa call pra você!! 🖤\n\n"
                         "```\n"
                         "╔══════════════════════════════════╗\n"
                         "║   🐱  LILU VOICEMASTER  🖤       ║\n"
@@ -614,8 +601,48 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
                     color=COR_ROXA,
                     timestamp=datetime.utcnow()
                 )
-                embed.set_footer(text="🐱 Lilu VoiceMaster • feito com muito amor!!")
-                await canal_texto.send(embed=embed, view=VMPainelView(self))
+                embed_painel.set_footer(text="🐱 Lilu VoiceMaster • feito com muito amor!!")
+                painel_view = VMPainelView(self)
+                painel_enviado = False
+
+                # 1ª opção — chat integrado do canal de voz (melhor opção)
+                try:
+                    await novo.send(embed=embed_painel, view=painel_view)
+                    painel_enviado = True
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+
+                # 2ª opção — canal configurado via l!vm setpainel
+                if not painel_enviado and self.painel_channel_id:
+                    canal_cfg = guild.get_channel(self.painel_channel_id)
+                    if canal_cfg:
+                        try:
+                            await canal_cfg.send(embed=embed_painel, view=painel_view)
+                            painel_enviado = True
+                        except Exception:
+                            pass
+
+                # 3ª opção — primeiro texto da mesma categoria da call
+                if not painel_enviado:
+                    cat_call = novo.category
+                    if cat_call:
+                        me = guild.me
+                        for tc in cat_call.text_channels:
+                            perms = tc.permissions_for(me)
+                            if perms.send_messages and perms.embed_links and perms.view_channel:
+                                try:
+                                    await tc.send(embed=embed_painel, view=painel_view)
+                                    painel_enviado = True
+                                except Exception:
+                                    pass
+                                break
+
+                # Fallback final — DM pro dono da call
+                if not painel_enviado:
+                    try:
+                        await member.send(embed=embed_painel, view=painel_view)
+                    except Exception:
+                        pass
 
             except discord.Forbidden:
                 pass
