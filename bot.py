@@ -68,14 +68,15 @@ COR_AZUL    = 0x5865F2   # discord azul
 #  🎙️  VOICEMASTER — CALLS TEMPORÁRIAS
 # ══════════════════════════════════════════════════════════════════
 
-VM_LOBBY_NAME   = "🐾 Criar Call"
-VM_DEFAULT_NAME = "🖤 Call da {user}"
-VM_DEFAULT_LIMIT = 0      # 0 = sem limite
-VM_EMPTY_DELAY   = 5      # segundos antes de deletar call vazia
+VM_LOBBY_NAME    = "🔜 crie sua call ᓚᘏᗢ"
+VM_DEFAULT_NAME  = "🖤 Call da {user}"
+VM_DEFAULT_LIMIT = 0       # 0 = sem limite
+VM_EMPTY_DELAY   = 5       # segundos antes de deletar call vazia
+VM_CATEGORY_ID   = 1506779068216115402   # categoria onde o lobby e as calls serão criados
 
 # Mensagens da Lilu no VoiceMaster
 _VM_MSGS = {
-    "sem_call":           "miau~ você ainda não tem uma call ativa, {user}!! entra no 🐾 Criar Call pra começar!! 🖤",
+    "sem_call":           "miau~ você ainda não tem uma call ativa, {user}!! entra no 🔜 crie sua call pra começar!! 🖤",
     "renomeada":          "prontinho!! renomeei sua call pra **{nome}**!! ficou fofo!! ✨🐱",
     "limite_set":         "ok!! agora sua call aceita até **{limite}** pessoinha(s)!! 🎯🖤",
     "limite_removido":    "removido!! qualquer quantidade de pessoa pode entrar agora!! 🥳🐱",
@@ -95,7 +96,7 @@ _VM_MSGS = {
     "user_nao_na_call":   "esse(a) usuário(a) não tá na sua call!! 🤔🐱",
     "ja_dono":            "você já é o(a) dono(a) dessa call!! 😸🖤",
     "dono_ainda_na_call": "o dono ainda tá na call!! só dá pra reivindicar quando ele sair!! 🥺🐱",
-    "setup_existe":       "já existe um lobby VoiceMaster aqui!! use l!vm reset pra recriar!! 🤔🖤",
+    "setup_existe":       "já existe um lobby VoiceMaster aqui!! use l!vm reset pra recriar!! 🤔🖤",  # mantido
 }
 
 def _vm_msg(key: str, **kwargs) -> str:
@@ -533,11 +534,26 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
     async def on_ready(self):
         await asyncio.sleep(2)
         for guild in self.bot.guilds:
+            categoria = guild.get_channel(VM_CATEGORY_ID)
             # Procura lobby existente pelo nome
             lobby = discord.utils.get(guild.voice_channels, name=VM_LOBBY_NAME)
             if lobby:
                 self.lobby_id = lobby.id
                 print(f"[LiluVM] Lobby encontrado: #{lobby.name} ({lobby.id})")
+            else:
+                # Cria automaticamente ao ligar, dentro da categoria fixa
+                try:
+                    lobby = await guild.create_voice_channel(
+                        name=VM_LOBBY_NAME,
+                        category=categoria,
+                        reason="Lilu VoiceMaster — criação automática no boot"
+                    )
+                    self.lobby_id = lobby.id
+                    print(f"[LiluVM] Lobby criado automaticamente: #{lobby.name} ({lobby.id})")
+                except discord.Forbidden:
+                    print("[LiluVM] Sem permissao pra criar o lobby automaticamente!")
+                except Exception as e:
+                    print(f"[LiluVM] Erro ao criar lobby: {e}")
         print("[LiluVM] VoiceMaster online!! 🐱")
 
     @commands.Cog.listener()
@@ -547,7 +563,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         # ── Entrou no lobby → cria call ──────────────
         if after.channel and after.channel.id == self.lobby_id:
             nome = VM_DEFAULT_NAME.format(user=member.display_name)
-            categoria = after.channel.category
+            categoria = guild.get_channel(VM_CATEGORY_ID) or after.channel.category
             try:
                 novo = await guild.create_voice_channel(
                     name=nome,
@@ -631,7 +647,9 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         if self.lobby_id and guild.get_channel(self.lobby_id):
             await ctx.send(embed=_vm_info("🤔 Já existe!!", _vm_msg("setup_existe")))
             return
-        categoria = guild.get_channel(categoria_id) if categoria_id else None
+        # Usa a categoria fixa, ou a informada, ou nenhuma
+        cat_id = categoria_id or VM_CATEGORY_ID
+        categoria = guild.get_channel(cat_id) if cat_id else None
         try:
             lobby = await guild.create_voice_channel(
                 name=VM_LOBBY_NAME,
@@ -642,7 +660,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
             embed = _vm_ok(
                 "🎉 VoiceMaster Configurado!!",
                 f"lobby criado: {lobby.mention}\n\n"
-                "agora é só entrar no canal **🐾 Criar Call** pra ter sua própria call!! 🖤🐱"
+                "agora é só entrar no canal **🔜 crie sua call ᓚᘏᗢ** pra ter sua própria call!! 🖤🐱"
             )
             await ctx.send(embed=embed)
         except discord.Forbidden:
@@ -654,14 +672,15 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         guild = ctx.guild
         # Deleta lobby antigo
         if self.lobby_id:
-            old = guild.get_channel(self.lobby_id)
-            if old:
+            old_ch = guild.get_channel(self.lobby_id)
+            if old_ch:
                 try:
-                    await old.delete(reason="Lilu VoiceMaster Reset")
+                    await old_ch.delete(reason="Lilu VoiceMaster Reset")
                 except Exception:
                     pass
         self.lobby_id = None
-        categoria = guild.get_channel(categoria_id) if categoria_id else None
+        cat_id = categoria_id or VM_CATEGORY_ID
+        categoria = guild.get_channel(cat_id) if cat_id else None
         try:
             lobby = await guild.create_voice_channel(
                 name=VM_LOBBY_NAME,
