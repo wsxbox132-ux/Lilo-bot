@@ -20,7 +20,7 @@ import os
 import re
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from dotenv import load_dotenv
 
@@ -110,17 +110,17 @@ def _vm_msg(key: str, **kwargs) -> str:
     return m.format(**kwargs)
 
 def _vm_ok(titulo: str, desc: str) -> discord.Embed:
-    e = discord.Embed(title=titulo, description=desc, color=COR_VERDE, timestamp=datetime.utcnow())
+    e = discord.Embed(title=titulo, description=desc, color=COR_VERDE, timestamp=datetime.now(timezone.utc))
     e.set_footer(text="🐱 Lilu VoiceMaster")
     return e
 
 def _vm_erro(desc: str) -> discord.Embed:
-    e = discord.Embed(title="❌ eita!!", description=desc, color=COR_VERMELHO, timestamp=datetime.utcnow())
+    e = discord.Embed(title="❌ eita!!", description=desc, color=COR_VERMELHO, timestamp=datetime.now(timezone.utc))
     e.set_footer(text="🐱 Lilu VoiceMaster")
     return e
 
 def _vm_info(titulo: str, desc: str) -> discord.Embed:
-    e = discord.Embed(title=titulo, description=desc, color=COR_ROSA, timestamp=datetime.utcnow())
+    e = discord.Embed(title=titulo, description=desc, color=COR_ROSA, timestamp=datetime.now(timezone.utc))
     e.set_footer(text="🐱 Lilu VoiceMaster")
     return e
 
@@ -475,7 +475,7 @@ class VMPainelView(discord.ui.View):
             return
         dono   = interaction.guild.get_member(info["owner"])
         banidos = ", ".join(f"<@{uid}>" for uid in info.get("banned", [])) or "Ninguém"
-        embed  = discord.Embed(title=f"📊 Info: {ch.name}", color=COR_ROSA, timestamp=datetime.utcnow())
+        embed  = discord.Embed(title=f"📊 Info: {ch.name}", color=COR_ROSA, timestamp=datetime.now(timezone.utc))
         embed.add_field(name="👑 Dono(a)",   value=dono.mention if dono else "Desconhecido", inline=True)
         embed.add_field(name="👥 Membros",   value=f"`{len(ch.members)}`" + (f"/{ch.user_limit}" if ch.user_limit else " (sem limite)"), inline=True)
         embed.add_field(name="🎧 Bitrate",   value=f"`{ch.bitrate // 1000}kbps`", inline=True)
@@ -604,7 +604,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
                         "use os botões abaixo pra gerenciar sua call!!"
                     ),
                     color=COR_ROXA,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
                 embed_painel.set_footer(text="🐱 Lilu VoiceMaster • feito com muito amor!!")
                 painel_view = VMPainelView(self)
@@ -679,7 +679,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
                 "`l!vm info` — status do sistema"
             ),
             color=COR_ROXA,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.set_footer(text="🐱 Lilu VoiceMaster")
         await ctx.send(embed=embed)
@@ -759,7 +759,7 @@ class VoiceMasterCog(commands.Cog, name="LiluVoiceMaster"):
         guild = ctx.guild
         lobby = guild.get_channel(self.lobby_id) if self.lobby_id else None
         painel_ch = guild.get_channel(self.painel_channel_id) if self.painel_channel_id else None
-        embed = discord.Embed(title="📊 Lilu VoiceMaster — Info", color=COR_ROXA, timestamp=datetime.utcnow())
+        embed = discord.Embed(title="📊 Lilu VoiceMaster — Info", color=COR_ROXA, timestamp=datetime.now(timezone.utc))
         embed.add_field(name="🎙️ Lobby",           value=lobby.mention if lobby else "❌ Não configurado", inline=True)
         embed.add_field(name="📞 Calls Ativas",    value=f"`{len(self.vm_channels)}`", inline=True)
         embed.add_field(name="⚙️ Delay Exclusão",  value=f"`{VM_EMPTY_DELAY}s`", inline=True)
@@ -793,7 +793,7 @@ class LogCog(commands.Cog, name="LiluLogs"):
         if not ch:
             return
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Entrou em uma call
         if after.channel and not before.channel:
@@ -857,7 +857,7 @@ class LogCog(commands.Cog, name="LiluLogs"):
         ch = self._log_chat_channel(message.guild)
         if not ch:
             return
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         embed = discord.Embed(
             title="🗑️ Mensagem Apagada",
             color=COR_VERMELHO,
@@ -886,7 +886,7 @@ class LogCog(commands.Cog, name="LiluLogs"):
         ch = self._log_chat_channel(before.guild)
         if not ch:
             return
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         embed = discord.Embed(
             title="✏️ Mensagem Editada",
             color=COR_DOURADO,
@@ -924,6 +924,8 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
         self.bot = bot
         self.welcome_channel_id: int = 1504639908550279210  # canal fixo de boas-vindas
         self.invite_cache: dict[str, int] = {}  # code → uses
+        # Agenda carregamento do cache assim que o bot estiver pronto
+        self.bot.loop.create_task(self.carregar_cache_inicial())
 
     def _get_welcome_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
         ch = guild.get_channel(self.welcome_channel_id)
@@ -940,11 +942,12 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
         except discord.Forbidden:
             pass
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        """Carrega o cache de invites ao iniciar."""
+    async def carregar_cache_inicial(self):
+        """Carrega o cache de invites após o bot estar pronto."""
+        await self.bot.wait_until_ready()
         for guild in self.bot.guilds:
             await self._atualizar_cache_invites(guild)
+            print(f"[LiluWelcome] Cache de invites carregado: {len(self.invite_cache)} convites em {guild.name}")
 
     @commands.Cog.listener()
     async def on_invite_create(self, invite: discord.Invite):
@@ -959,76 +962,96 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild = member.guild
-        ch    = self._get_welcome_channel(guild)
+        print(f"[LiluWelcome] on_member_join disparado: {member} ({member.id}) em {guild.name}")
 
         # ── Detecta qual convite foi usado ──────────────────────────────
-        invitador = None
+        invitador   = None
         invite_code = None
         try:
             novos_invites = await guild.fetch_invites()
             for inv in novos_invites:
                 usos_antigos = self.invite_cache.get(inv.code, 0)
                 if inv.uses and inv.uses > usos_antigos:
-                    invitador    = inv.inviter
-                    invite_code  = inv.code
+                    invitador   = inv.inviter
+                    invite_code = inv.code
                     break
-            # Atualiza cache
             self.invite_cache = {inv.code: inv.uses for inv in novos_invites}
+            print(f"[LiluWelcome] Convite detectado: {invite_code} por {invitador}")
         except discord.Forbidden:
-            pass
+            print("[LiluWelcome] Sem permissão pra ver invites!")
+        except Exception as e:
+            print(f"[LiluWelcome] Erro ao detectar convite: {e}")
 
         # ── Mensagem de boas-vindas ──────────────────────────────────────
-        if ch:
-            bv_texto = random.choice(_BOAS_VINDAS_BASE).format(
-                mention=member.mention,
-                name=member.display_name
-            )
+        try:
+            ch = guild.get_channel(self.welcome_channel_id)
+            print(f"[LiluWelcome] Canal de boas-vindas: {ch} (ID={self.welcome_channel_id})")
+            if not ch:
+                ch = guild.system_channel
+                print(f"[LiluWelcome] Usando canal do sistema: {ch}")
 
-            embed = discord.Embed(
-                title="🐾 Nova Pessoinha Chegou!!",
-                description=bv_texto,
-                color=COR_ROXA,
-                timestamp=datetime.utcnow()
-            )
-            embed.add_field(name="👤 Usuário",      value=f"{member} (`{member.id}`)",                              inline=True)
-            embed.add_field(name="📅 Conta criada", value=f"<t:{int(member.created_at.timestamp())}:R>",             inline=True)
-            embed.add_field(name="👥 Membro Nº",    value=f"`#{guild.member_count}`",                              inline=True)
-            if invitador:
-                embed.add_field(name="💌 Convidado por", value=f"{invitador.mention} (`{invite_code}`)", inline=False)
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text="🐱 Lilu • bem-vindo(a)!!")
-            await ch.send(embed=embed)
+            if ch:
+                bv_texto = random.choice(_BOAS_VINDAS_BASE).format(
+                    mention=member.mention,
+                    name=member.display_name
+                )
+                embed = discord.Embed(
+                    title="🐾 Nova Pessoinha Chegou!!",
+                    description=bv_texto,
+                    color=COR_ROXA,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.add_field(name="👤 Usuário",      value=f"{member} (`{member.id}`)",                   inline=True)
+                embed.add_field(name="📅 Conta criada", value=f"<t:{int(member.created_at.timestamp())}:R>",  inline=True)
+                embed.add_field(name="👥 Membro Nº",    value=f"`#{guild.member_count}`",                    inline=True)
+                if invitador:
+                    embed.add_field(name="💌 Convidado por", value=f"{invitador.mention} (`{invite_code}`)", inline=False)
+                embed.set_thumbnail(url=member.display_avatar.url)
+                embed.set_footer(text="🐱 Lilu • bem-vindo(a)!!")
+                await ch.send(embed=embed)
+                print(f"[LiluWelcome] Boas-vindas enviadas em #{ch.name}")
+            else:
+                print("[LiluWelcome] ERRO: nenhum canal de boas-vindas encontrado!!")
+        except Exception as e:
+            print(f"[LiluWelcome] ERRO ao enviar boas-vindas: {e}")
 
         # ── Log no canal de convites ─────────────────────────────────────
-        invite_ch = guild.get_channel(INVITE_LOG_ID)
-        if invite_ch:
-            if invitador:
-                embed_inv = discord.Embed(
-                    title="💌 Novo Convite Usado!!",
-                    description=(
-                        f"{member.mention} entrou no servidor usando o convite de {invitador.mention}!!\n\n"
-                        f"🔗 Código do convite: `{invite_code}`"
-                    ),
-                    color=COR_AZUL,
-                    timestamp=datetime.utcnow()
-                )
-                embed_inv.add_field(name="👤 Quem entrou",    value=f"{member} (`{member.id}`)",        inline=True)
-                embed_inv.add_field(name="💌 Quem convidou",  value=f"{invitador} (`{invitador.id}`)",  inline=True)
-                embed_inv.add_field(name="🔗 Código",          value=f"`{invite_code}`",                 inline=True)
+        try:
+            invite_ch = guild.get_channel(INVITE_LOG_ID)
+            print(f"[LiluWelcome] Canal de convites: {invite_ch} (ID={INVITE_LOG_ID})")
+            if invite_ch:
+                if invitador:
+                    embed_inv = discord.Embed(
+                        title="💌 Novo Convite Usado!!",
+                        description=(
+                            f"{member.mention} entrou no servidor usando o convite de {invitador.mention}!!\n\n"
+                            f"🔗 Código do convite: `{invite_code}`"
+                        ),
+                        color=COR_AZUL,
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    embed_inv.add_field(name="👤 Quem entrou",   value=f"{member} (`{member.id}`)",       inline=True)
+                    embed_inv.add_field(name="💌 Quem convidou", value=f"{invitador} (`{invitador.id}`)", inline=True)
+                    embed_inv.add_field(name="🔗 Código",         value=f"`{invite_code}`",                inline=True)
+                else:
+                    embed_inv = discord.Embed(
+                        title="💌 Novo Membro Entrou!!",
+                        description=(
+                            f"{member.mention} entrou no servidor, mas não identifiquei qual convite foi usado!!\n"
+                            "*(convite de parceria, link de descoberta, ou sem permissão pra ver convites)*"
+                        ),
+                        color=COR_DOURADO,
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    embed_inv.add_field(name="👤 Quem entrou", value=f"{member} (`{member.id}`)", inline=True)
+                embed_inv.set_thumbnail(url=member.display_avatar.url)
+                embed_inv.set_footer(text="🐱 Lilu • log de convites")
+                await invite_ch.send(embed=embed_inv)
+                print(f"[LiluWelcome] Log de convite enviado em #{invite_ch.name}")
             else:
-                embed_inv = discord.Embed(
-                    title="💌 Novo Membro Entrou!!",
-                    description=(
-                        f"{member.mention} entrou no servidor, mas não consegui identificar qual convite foi usado!!\n"
-                        "*(pode ser convite de parceria, link de descoberta, ou falta de permissão pra ver convites)*"
-                    ),
-                    color=COR_DOURADO,
-                    timestamp=datetime.utcnow()
-                )
-                embed_inv.add_field(name="👤 Quem entrou", value=f"{member} (`{member.id}`)", inline=True)
-            embed_inv.set_thumbnail(url=member.display_avatar.url)
-            embed_inv.set_footer(text="🐱 Lilu • log de convites")
-            await invite_ch.send(embed=embed_inv)
+                print(f"[LiluWelcome] ERRO: canal de convites {INVITE_LOG_ID} não encontrado!!")
+        except Exception as e:
+            print(f"[LiluWelcome] ERRO ao enviar log de convite: {e}")
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -1041,7 +1064,7 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
             title="🚪 Alguém Saiu...",
             description=f"**{member}** saiu do servidor... 🖤🐱",
             color=0x555555,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text="🐱 Lilu")
@@ -2380,7 +2403,7 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
             "user": message.author.display_name,
             "user_id": message.author.id,
             "content": message.content,
-            "time": datetime.utcnow().isoformat()
+            "time": datetime.now(timezone.utc).isoformat()
         })
 
         # Checa se Lilu foi mencionada ou chamada pelo nome
@@ -2390,7 +2413,7 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
         )
 
         # Checar cooldown
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ultimo = self._ultimo_resp.get(message.channel.id)
         if ultimo and (now - ultimo).total_seconds() < self._cooldown_resp:
             return
@@ -2468,7 +2491,7 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
                 "miauu~~ 🖤🐱",
                 "*chacoalha as orelhinhas* 🐾✨",
             ]
-            now2 = datetime.utcnow()
+            now2 = datetime.now(timezone.utc)
             ultimo2 = self._ultimo_resp.get(message.channel.id)
             # Só faz espontâneo se faz mais de 60s sem responder nesse canal
             if not ultimo2 or (now2 - ultimo2).total_seconds() > 60:
@@ -2539,7 +2562,7 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
                 title=f"📚 Gatilhos que Conheço — Página {i+1}/{len(chunks)}",
                 description="\n".join(f"• `{c}` ({len(self.db['respostas'][c])} resp.)" for c in chunk),
                 color=COR_ROXA,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             embed.set_footer(text="🐱 Lilu • aprendizado")
             await ctx.send(embed=embed)
@@ -2628,7 +2651,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
     @tasks.loop(hours=1)
     async def verificar_aniversarios(self):
         """Verifica todo aniversário de hora em hora; dispara às 00h."""
-        agora = datetime.utcnow()
+        agora = datetime.now(timezone.utc)
         # Só dispara na primeira hora do dia (00:00–01:00 UTC)
         if agora.hour != 0:
             return
@@ -2647,7 +2670,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
                             title="🎂 Feliz Aniversário!! 🥳",
                             description=msg,
                             color=COR_DOURADO,
-                            timestamp=datetime.utcnow()
+                            timestamp=datetime.now(timezone.utc)
                         )
                         embed.set_thumbnail(url=member.display_avatar.url)
                         embed.set_footer(text="🐱 Lilu • parabéns!!")
@@ -2702,7 +2725,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
                 "no dia certo eu venho aqui dar parabéns pra você!! 🥳🎉"
             ),
             color=COR_DOURADO,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.set_thumbnail(url=message.author.display_avatar.url)
         embed.set_footer(text="🐱 Lilu • aniversários")
@@ -2763,7 +2786,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
     async def proximos_aniversarios(self, ctx: commands.Context):
         """Lista os próximos aniversários do servidor. Uso: l!proximosniver"""
         guild = ctx.guild
-        hoje = datetime.utcnow()
+        hoje = datetime.now(timezone.utc)
         proximos = []
         for uid_str, data_str in self.birthdays.items():
             member = guild.get_member(int(uid_str))
@@ -2797,7 +2820,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
             title="🎉 Próximos Aniversários",
             description=desc,
             color=COR_DOURADO,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.set_footer(text="🐱 Lilu • aniversários")
         await ctx.send(embed=embed)
@@ -2826,7 +2849,7 @@ async def on_ready():
     for guild in bot.guilds:
         ch = guild.get_channel(LOG_CHAT_ID)
         if ch:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             embed = discord.Embed(
                 description=(
                     "```\n"
@@ -2872,7 +2895,7 @@ async def lilu_help(ctx: commands.Context):
         title="🐱 Lilu Bot — Ajuda",
         description="oi!! eu sou a Lilu, uma gatinha preta!! aqui tá tudo que eu sei fazer!! 🖤",
         color=COR_ROXA,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.add_field(
         name="🎙️ VoiceMaster (Calls)",
@@ -2949,7 +2972,7 @@ async def lilu_info(ctx: commands.Context):
             "use `l!help` pra ver tudo que sei fazer!!"
         ),
         color=COR_ROXA,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text="🐱 Lilu Bot v1.0")
     await ctx.send(embed=embed)
