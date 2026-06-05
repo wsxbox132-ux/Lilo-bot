@@ -36,6 +36,10 @@ TOKEN = os.getenv("LILU_TOKEN") or os.getenv("TOKEN")
 LOG_CALL_ID  = 1505278837108248696   # log de voz (entradas/saídas de call)
 LOG_CHAT_ID  = 1505278899200725015   # log de texto (msgs editadas/apagadas)
 
+# Canais especiais
+INVITE_LOG_ID   = 1506846387655016528   # canal de convites (quem convidou quem)
+BIRTHDAY_CH_ID  = 1506768577917616179   # canal de aniversário (formato: 00/00 nome)
+
 # Arquivo de aprendizado de diálogo
 DIALOGO_FILE = "lilu_dialogo.json"
 
@@ -48,6 +52,7 @@ intents.message_content = True
 intents.members         = True
 intents.guilds          = True
 intents.voice_states    = True
+intents.invites         = True   # necessário para rastrear convites
 
 bot = commands.Bot(command_prefix=["l!", "L!", "lilu ", "Lilu "], intents=intents)
 bot.remove_command("help")   # usaremos help customizado
@@ -917,46 +922,113 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.welcome_channel_name = "👋・bem-vindo"   # nome do canal de boas-vindas (ajuste se necessário)
-        self.welcome_channel_id: int | None = None      # pode setar por ID também
+        self.welcome_channel_id: int = 1504639908550279210  # canal fixo de boas-vindas
+        self.invite_cache: dict[str, int] = {}  # code → uses
 
     def _get_welcome_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
-        if self.welcome_channel_id:
-            ch = guild.get_channel(self.welcome_channel_id)
-            if ch:
-                return ch
-        # Busca por nome
-        ch = discord.utils.get(guild.text_channels, name=self.welcome_channel_name)
+        ch = guild.get_channel(self.welcome_channel_id)
         if ch:
             return ch
         # Fallback: canal do sistema
         return guild.system_channel
 
+    async def _atualizar_cache_invites(self, guild: discord.Guild):
+        """Atualiza o cache de invites do servidor."""
+        try:
+            invites = await guild.fetch_invites()
+            self.invite_cache = {inv.code: inv.uses for inv in invites}
+        except discord.Forbidden:
+            pass
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Carrega o cache de invites ao iniciar."""
+        for guild in self.bot.guilds:
+            await self._atualizar_cache_invites(guild)
+
+    @commands.Cog.listener()
+    async def on_invite_create(self, invite: discord.Invite):
+        """Atualiza cache quando um convite é criado."""
+        self.invite_cache[invite.code] = invite.uses or 0
+
+    @commands.Cog.listener()
+    async def on_invite_delete(self, invite: discord.Invite):
+        """Remove do cache quando um convite é deletado."""
+        self.invite_cache.pop(invite.code, None)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild = member.guild
         ch    = self._get_welcome_channel(guild)
-        if not ch:
-            return
 
-        bv_texto = random.choice(_BOAS_VINDAS_BASE).format(
-            mention=member.mention,
-            name=member.display_name
-        )
+        # ── Detecta qual convite foi usado ──────────────────────────────
+        invitador = None
+        invite_code = None
+        try:
+            novos_invites = await guild.fetch_invites()
+            for inv in novos_invites:
+                usos_antigos = self.invite_cache.get(inv.code, 0)
+                if inv.uses and inv.uses > usos_antigos:
+                    invitador    = inv.inviter
+                    invite_code  = inv.code
+                    break
+            # Atualiza cache
+            self.invite_cache = {inv.code: inv.uses for inv in novos_invites}
+        except discord.Forbidden:
+            pass
 
-        embed = discord.Embed(
-            title="🐾 Nova Pessoinha Chegou!!",
-            description=bv_texto,
-            color=COR_ROXA,
-            timestamp=datetime.utcnow()
-        )
-        embed.add_field(name="👤 Usuário",  value=f"{member} (`{member.id}`)",                                   inline=True)
-        embed.add_field(name="📅 Conta criada", value=f"<t:{int(member.created_at.timestamp())}:R>",              inline=True)
-        embed.add_field(name="👥 Membro Nº",    value=f"`#{guild.member_count}`",                               inline=True)
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text="🐱 Lilu • bem-vindo(a)!!")
+        # ── Mensagem de boas-vindas ──────────────────────────────────────
+        if ch:
+            bv_texto = random.choice(_BOAS_VINDAS_BASE).format(
+                mention=member.mention,
+                name=member.display_name
+            )
 
-        await ch.send(embed=embed)
+            embed = discord.Embed(
+                title="🐾 Nova Pessoinha Chegou!!",
+                description=bv_texto,
+                color=COR_ROXA,
+                timestamp=datetime.utcnow()
+            )
+            embed.add_field(name="👤 Usuário",      value=f"{member} (`{member.id}`)",                              inline=True)
+            embed.add_field(name="📅 Conta criada", value=f"<t:{int(member.created_at.timestamp())}:R>",             inline=True)
+            embed.add_field(name="👥 Membro Nº",    value=f"`#{guild.member_count}`",                              inline=True)
+            if invitador:
+                embed.add_field(name="💌 Convidado por", value=f"{invitador.mention} (`{invite_code}`)", inline=False)
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text="🐱 Lilu • bem-vindo(a)!!")
+            await ch.send(embed=embed)
+
+        # ── Log no canal de convites ─────────────────────────────────────
+        invite_ch = guild.get_channel(INVITE_LOG_ID)
+        if invite_ch:
+            if invitador:
+                embed_inv = discord.Embed(
+                    title="💌 Novo Convite Usado!!",
+                    description=(
+                        f"{member.mention} entrou no servidor usando o convite de {invitador.mention}!!\n\n"
+                        f"🔗 Código do convite: `{invite_code}`"
+                    ),
+                    color=COR_AZUL,
+                    timestamp=datetime.utcnow()
+                )
+                embed_inv.add_field(name="👤 Quem entrou",    value=f"{member} (`{member.id}`)",        inline=True)
+                embed_inv.add_field(name="💌 Quem convidou",  value=f"{invitador} (`{invitador.id}`)",  inline=True)
+                embed_inv.add_field(name="🔗 Código",          value=f"`{invite_code}`",                 inline=True)
+            else:
+                embed_inv = discord.Embed(
+                    title="💌 Novo Membro Entrou!!",
+                    description=(
+                        f"{member.mention} entrou no servidor, mas não consegui identificar qual convite foi usado!!\n"
+                        "*(pode ser convite de parceria, link de descoberta, ou falta de permissão pra ver convites)*"
+                    ),
+                    color=COR_DOURADO,
+                    timestamp=datetime.utcnow()
+                )
+                embed_inv.add_field(name="👤 Quem entrou", value=f"{member} (`{member.id}`)", inline=True)
+            embed_inv.set_thumbnail(url=member.display_avatar.url)
+            embed_inv.set_footer(text="🐱 Lilu • log de convites")
+            await invite_ch.send(embed=embed_inv)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -989,11 +1061,11 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
                 )
             )
         else:
-            self.welcome_channel_id = None
+            self.welcome_channel_id = 1504639908550279210
             await ctx.send(
                 embed=discord.Embed(
                     title="✅ Canal Resetado!!",
-                    description=f"vou buscar por nome `{self.welcome_channel_name}` ou usar o canal do sistema!! 🐱",
+                    description=f"voltei pro canal padrão de boas-vindas!! 🐱",
                     color=COR_VERDE
                 )
             )
@@ -2514,6 +2586,224 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
 
 
 # ══════════════════════════════════════════════════════════════════
+#  🎂  ANIVERSÁRIOS — PARABÉNS AUTOMÁTICO
+# ══════════════════════════════════════════════════════════════════
+
+BIRTHDAY_FILE = "lilu_birthdays.json"
+
+def _carregar_aniversarios() -> dict:
+    """Carrega o arquivo de aniversários. Formato: {user_id: "DD/MM"}"""
+    if os.path.exists(BIRTHDAY_FILE):
+        try:
+            with open(BIRTHDAY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def _salvar_aniversarios(data: dict):
+    with open(BIRTHDAY_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+_BIRTHDAY_MSGS = [
+    "🎂 FELIZ ANIVERSÁRIO, {mention}!! 🎉🐱🖤 que seu dia seja incrível e cheio de coisas boas!!",
+    "🥳 oi oi oi!! hoje é o aniversário de {mention}!! 🎂🖤 feliz aniversário!! você merece tudo de bom!!",
+    "🎉 PARABÉNS {mention}!! 🐱🖤🎂 a Lilu deseja um dia lindo e muito especial pra você!!",
+    "🎂 hoje é dia de {mention}!! FELIZ ANIVERSÁRIO!! 🎉🐾🖤 que venham muitos anos mais ao lado da gente!!",
+    "🥳 *joga confete* FELIZ ANIVERSÁRIO {mention}!! 🎂🐱✨ que seu dia seja tão fofo quanto você!!",
+]
+
+class BirthdayCog(commands.Cog, name="LiluBirthday"):
+    """🐱 Sistema de aniversários da Lilu."""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.birthdays: dict[str, str] = _carregar_aniversarios()  # {str(user_id): "DD/MM"}
+        self.verificar_aniversarios.start()
+
+    def cog_unload(self):
+        self.verificar_aniversarios.cancel()
+
+    # ── Loop diário ───────────────────────────────
+    @tasks.loop(hours=1)
+    async def verificar_aniversarios(self):
+        """Verifica todo aniversário de hora em hora; dispara às 00h."""
+        agora = datetime.utcnow()
+        # Só dispara na primeira hora do dia (00:00–01:00 UTC)
+        if agora.hour != 0:
+            return
+
+        hoje = agora.strftime("%d/%m")
+        for guild in self.bot.guilds:
+            ch = guild.get_channel(BIRTHDAY_CH_ID)
+            if not ch:
+                continue
+            for user_id_str, data in self.birthdays.items():
+                if data == hoje:
+                    member = guild.get_member(int(user_id_str))
+                    if member:
+                        msg = random.choice(_BIRTHDAY_MSGS).format(mention=member.mention)
+                        embed = discord.Embed(
+                            title="🎂 Feliz Aniversário!! 🥳",
+                            description=msg,
+                            color=COR_DOURADO,
+                            timestamp=datetime.utcnow()
+                        )
+                        embed.set_thumbnail(url=member.display_avatar.url)
+                        embed.set_footer(text="🐱 Lilu • parabéns!!")
+                        await ch.send(embed=embed)
+
+    @verificar_aniversarios.before_loop
+    async def before_loop(self):
+        await self.bot.wait_until_ready()
+
+    # ── Listener: detecta "DD/MM nome" no canal de aniversário ──────────
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+        if message.channel.id != BIRTHDAY_CH_ID:
+            return
+
+        # Detecta padrão DD/MM no início da mensagem (ex: "15/03" ou "15/03 Fulano")
+        match = re.match(r"^(\d{1,2}/\d{1,2})", message.content.strip())
+        if not match:
+            return
+
+        data_str = match.group(1)
+
+        # Valida data
+        try:
+            partes = data_str.split("/")
+            dia, mes = int(partes[0]), int(partes[1])
+            if not (1 <= dia <= 31 and 1 <= mes <= 12):
+                raise ValueError
+            # Formata com zero à esquerda
+            data_formatada = f"{dia:02d}/{mes:02d}"
+        except (ValueError, IndexError):
+            await message.reply(
+                embed=discord.Embed(
+                    description="data inválida!! usa o formato `DD/MM`, por exemplo: `15/03` 🐱🖤",
+                    color=COR_VERMELHO
+                ),
+                delete_after=8
+            )
+            return
+
+        # Salva
+        self.birthdays[str(message.author.id)] = data_formatada
+        _salvar_aniversarios(self.birthdays)
+
+        embed = discord.Embed(
+            title="🎂 Aniversário Registrado!!",
+            description=(
+                f"anotei aqui, {message.author.mention}!! 🐱🖤\n\n"
+                f"📅 Seu aniversário: **{data_formatada}**\n"
+                "no dia certo eu venho aqui dar parabéns pra você!! 🥳🎉"
+            ),
+            color=COR_DOURADO,
+            timestamp=datetime.utcnow()
+        )
+        embed.set_thumbnail(url=message.author.display_avatar.url)
+        embed.set_footer(text="🐱 Lilu • aniversários")
+        await message.reply(embed=embed)
+
+    # ── Comandos de aniversário ────────────────────────────────────────
+    @commands.command(name="meuniver", aliases=["meuaniver", "aniversario"])
+    async def meu_aniversario(self, ctx: commands.Context, data: str = None):
+        """Registra ou consulta seu aniversário. Uso: l!meuniver 15/03"""
+        if data is None:
+            # Consulta
+            saved = self.birthdays.get(str(ctx.author.id))
+            if saved:
+                await ctx.send(embed=discord.Embed(
+                    description=f"seu aniversário registrado é **{saved}** 🎂🖤🐱",
+                    color=COR_DOURADO
+                ))
+            else:
+                await ctx.send(embed=discord.Embed(
+                    description=(
+                        f"você ainda não registrou seu aniversário, {ctx.author.mention}!!\n"
+                        f"manda sua data no canal <#{BIRTHDAY_CH_ID}> assim: `DD/MM` 🐱🖤"
+                    ),
+                    color=COR_ROSA
+                ))
+            return
+
+        match = re.match(r"^(\d{1,2}/\d{1,2})$", data.strip())
+        if not match:
+            await ctx.send(embed=discord.Embed(
+                description="formato inválido!! usa `DD/MM`, ex: `15/03` 🐱🖤",
+                color=COR_VERMELHO
+            ))
+            return
+
+        try:
+            partes = data.split("/")
+            dia, mes = int(partes[0]), int(partes[1])
+            if not (1 <= dia <= 31 and 1 <= mes <= 12):
+                raise ValueError
+            data_formatada = f"{dia:02d}/{mes:02d}"
+        except ValueError:
+            await ctx.send(embed=discord.Embed(
+                description="data inválida!! confere o dia e mês!! 🐱🖤",
+                color=COR_VERMELHO
+            ))
+            return
+
+        self.birthdays[str(ctx.author.id)] = data_formatada
+        _salvar_aniversarios(self.birthdays)
+        await ctx.send(embed=discord.Embed(
+            title="🎂 Aniversário Registrado!!",
+            description=f"anotei!! seu aniversário é **{data_formatada}** 🥳🐱🖤",
+            color=COR_DOURADO
+        ))
+
+    @commands.command(name="proximosniver", aliases=["proxaniver", "aniversarios"])
+    async def proximos_aniversarios(self, ctx: commands.Context):
+        """Lista os próximos aniversários do servidor. Uso: l!proximosniver"""
+        guild = ctx.guild
+        hoje = datetime.utcnow()
+        proximos = []
+        for uid_str, data_str in self.birthdays.items():
+            member = guild.get_member(int(uid_str))
+            if not member:
+                continue
+            try:
+                dia, mes = map(int, data_str.split("/"))
+                aniver = datetime(hoje.year, mes, dia)
+                if aniver < hoje.replace(hour=0, minute=0, second=0, microsecond=0):
+                    aniver = datetime(hoje.year + 1, mes, dia)
+                dias_faltam = (aniver - hoje.replace(hour=0, minute=0, second=0, microsecond=0)).days
+                proximos.append((dias_faltam, data_str, member))
+            except ValueError:
+                continue
+
+        proximos.sort(key=lambda x: x[0])
+        proximos = proximos[:10]  # Máximo 10
+
+        if not proximos:
+            await ctx.send(embed=discord.Embed(
+                description="ninguém registrou aniversário ainda!! 🥺🐱🖤",
+                color=COR_ROSA
+            ))
+            return
+
+        desc = "\n".join(
+            f"🎂 **{data}** — {m.mention} (`{dias}` dia{'s' if dias != 1 else ''} restante{'s' if dias != 1 else ''})"
+            for dias, data, m in proximos
+        )
+        embed = discord.Embed(
+            title="🎉 Próximos Aniversários",
+            description=desc,
+            color=COR_DOURADO,
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text="🐱 Lilu • aniversários")
+        await ctx.send(embed=embed)
+
+
+# ══════════════════════════════════════════════════════════════════
 #  🐱  EVENTOS GLOBAIS DO BOT
 # ══════════════════════════════════════════════════════════════════
 
@@ -2556,11 +2846,16 @@ async def on_ready():
                 "📋 Logs de Voz — entradas/saídas de call\n"
                 "📝 Logs de Chat — msgs editadas/apagadas\n"
                 "👋 Boas-Vindas — recepção de membros\n"
+                "💌 Log de Convites — rastreamento de quem convidou quem\n"
+                "🎂 Aniversários — parabéns automático\n"
                 "💬 Diálogo — aprendizado conversacional"
             ))
             embed.add_field(name="⚙️ Configuração", inline=False, value=(
                 f"📞 Log Call: <#{LOG_CALL_ID}>\n"
                 f"📝 Log Chat: <#{LOG_CHAT_ID}>\n"
+                f"👋 Boas-Vindas: <#{1504639908550279210}>\n"
+                f"💌 Convites: <#{INVITE_LOG_ID}>\n"
+                f"🎂 Aniversários: <#{BIRTHDAY_CH_ID}>\n"
                 f"🤖 Prefixo: `l!` ou `lilu `"
             ))
             embed.set_footer(text="🐱 Lilu Bot • Todos os sistemas operacionais!!")
@@ -2591,9 +2886,21 @@ async def lilu_help(ctx: commands.Context):
         )
     )
     embed.add_field(
-        name="👋 Boas-Vindas",
+        name="👋 Boas-Vindas & Convites",
         inline=False,
-        value="`l!setwelcome #canal` — define canal de boas-vindas"
+        value=(
+            f"`l!setwelcome #canal` — redefine canal de boas-vindas\n"
+            f"Boas-vindas: <#{1504639908550279210}> | Convites: <#{INVITE_LOG_ID}>"
+        )
+    )
+    embed.add_field(
+        name="🎂 Aniversários",
+        inline=False,
+        value=(
+            f"No canal <#{BIRTHDAY_CH_ID}> manda sua data assim: `15/03` e eu registro!!\n"
+            "`l!meuniver [DD/MM]` — registra ou consulta seu aniversário\n"
+            "`l!proximosniver` — lista os próximos aniversários do servidor"
+        )
     )
     embed.add_field(
         name="💬 Diálogo & Aprendizado",
@@ -2658,6 +2965,7 @@ async def _main():
         await bot.add_cog(LogCog(bot))
         await bot.add_cog(WelcomeCog(bot))
         await bot.add_cog(DialogueCog(bot))
+        await bot.add_cog(BirthdayCog(bot))
 
         # Registra views persistentes (sobrevivem a restarts)
         bot.add_view(VMPainelView(bot.cogs["LiluVoiceMaster"]))
