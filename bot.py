@@ -50,6 +50,27 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # Arquivo de aprendizado de diálogo
 DIALOGO_FILE = os.path.join(DATA_DIR, "lilu_dialogo.json")
 
+# Arquivo de contagem de convites (quantas pessoas cada um já convidou)
+INVITE_COUNT_FILE = os.path.join(DATA_DIR, "lilu_invite_counts.json")
+
+def _carregar_invite_counts() -> dict:
+    """Carrega a contagem de convites. Formato: {inviter_id: quantidade}"""
+    if os.path.exists(INVITE_COUNT_FILE):
+        try:
+            with open(INVITE_COUNT_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[Lilu] ⚠️ ERRO ao ler {INVITE_COUNT_FILE}: {e!r}")
+            return {}
+    return {}
+
+def _salvar_invite_counts(data: dict):
+    try:
+        with open(INVITE_COUNT_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Lilu] ⚠️ ERRO ao salvar {INVITE_COUNT_FILE}: {e!r}")
+
 # ══════════════════════════════════════════════════════════════════
 #  🤖  SETUP DO BOT
 # ══════════════════════════════════════════════════════════════════
@@ -931,6 +952,7 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
         self.bot = bot
         self.welcome_channel_id: int = 1504639908550279210  # canal fixo de boas-vindas
         self.invite_cache: dict[str, int] = {}  # code → uses
+        self.invite_counts: dict[str, int] = _carregar_invite_counts()  # {inviter_id: total convidado}
         # Agenda carregamento do cache assim que o bot estiver pronto
         self.bot.loop.create_task(self.carregar_cache_inicial())
 
@@ -1028,6 +1050,10 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
             print(f"[LiluWelcome] Canal de convites: {invite_ch} (ID={INVITE_LOG_ID})")
             if invite_ch:
                 if invitador:
+                    total_convites = self.invite_counts.get(str(invitador.id), 0) + 1
+                    self.invite_counts[str(invitador.id)] = total_convites
+                    _salvar_invite_counts(self.invite_counts)
+
                     embed_inv = discord.Embed(
                         title="💌 Novo Convite Usado!!",
                         description=(
@@ -1040,6 +1066,11 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
                     embed_inv.add_field(name="👤 Quem entrou",   value=f"{member} (`{member.id}`)",       inline=True)
                     embed_inv.add_field(name="💌 Quem convidou", value=f"{invitador} (`{invitador.id}`)", inline=True)
                     embed_inv.add_field(name="🔗 Código",         value=f"`{invite_code}`",                inline=True)
+                    embed_inv.add_field(
+                        name="🎉 Total de convites",
+                        value=f"{invitador.mention} já tem **{total_convites}** convite{'s' if total_convites != 1 else ''}!!",
+                        inline=False
+                    )
                 else:
                     embed_inv = discord.Embed(
                         title="💌 Novo Membro Entrou!!",
