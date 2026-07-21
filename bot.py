@@ -38,6 +38,7 @@ LOG_CHAT_ID  = 1505278899200725015   # log de texto (msgs editadas/apagadas)
 
 # Canais especiais
 INVITE_LOG_ID   = 1506846387655016528   # canal de convites (quem convidou quem)
+LEAVE_CH_ID     = 1505285756556415026   # canal de despedida (quando alguém sai)
 BIRTHDAY_CH_ID  = 1513667135073685564   # canal de aniversário (formato: 00/00 nome)
 
 # Pasta onde os arquivos de dados (JSON) ficam salvos.
@@ -1062,8 +1063,9 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         guild = member.guild
-        ch    = self._get_welcome_channel(guild)
+        ch    = guild.get_channel(LEAVE_CH_ID)
         if not ch:
+            print(f"[LiluWelcome] ERRO: canal de despedida {LEAVE_CH_ID} não encontrado!!")
             return
 
         embed = discord.Embed(
