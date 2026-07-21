@@ -2619,28 +2619,64 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
 # ══════════════════════════════════════════════════════════════════
 
 BIRTHDAY_FILE = os.path.join(DATA_DIR, "lilu_birthdays.json")
+BIRTHDAY_ROLE_ID = 1512254407369293924   # cargo dado durante o dia do aniversário
 
 def _carregar_aniversarios() -> dict:
     """Carrega o arquivo de aniversários. Formato: {user_id: "DD/MM"}"""
+    print(f"[Lilu] carregando aniversários de: {os.path.abspath(BIRTHDAY_FILE)}")
     if os.path.exists(BIRTHDAY_FILE):
         try:
             with open(BIRTHDAY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
+                dados = json.load(f)
+                print(f"[Lilu] {len(dados)} aniversário(s) carregado(s) com sucesso!")
+                return dados
+        except Exception as e:
+            print(f"[Lilu] ⚠️ ERRO ao ler {BIRTHDAY_FILE}: {e!r}")
+            return {}
+    print(f"[Lilu] ⚠️ arquivo {BIRTHDAY_FILE} não existe ainda — começando vazio (normal se for a primeira vez).")
     return {}
 
 def _salvar_aniversarios(data: dict):
-    with open(BIRTHDAY_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(BIRTHDAY_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Lilu] ⚠️ ERRO ao salvar {BIRTHDAY_FILE}: {e!r}")
+        raise
 
 _BIRTHDAY_MSGS = [
-    "🎂 FELIZ ANIVERSÁRIO, {mention}!! 🎉🐱🖤 que seu dia seja incrível e cheio de coisas boas!!",
-    "🥳 oi oi oi!! hoje é o aniversário de {mention}!! 🎂🖤 feliz aniversário!! você merece tudo de bom!!",
-    "🎉 PARABÉNS {mention}!! 🐱🖤🎂 a Lilu deseja um dia lindo e muito especial pra você!!",
-    "🎂 hoje é dia de {mention}!! FELIZ ANIVERSÁRIO!! 🎉🐾🖤 que venham muitos anos mais ao lado da gente!!",
-    "🥳 *joga confete* FELIZ ANIVERSÁRIO {mention}!! 🎂🐱✨ que seu dia seja tão fofo quanto você!!",
+    (
+        "🎉🎂 **HOJE TEM FESTA!!** 🎂🎉\n\n"
+        "{mention} tá completando mais um aninho hoje!! 🥳✨\n"
+        "que venha muita saúde, muito amor e MUITO bolo pra comemorar!! 🍰🖤\n\n"
+        "parabéns, parabéns, parabéns!! a Lilu tá muito feliz por você hoje!! 😻🎊"
+    ),
+    (
+        "🥳✨ *pula em cima da mesa e joga confete* ✨🥳\n\n"
+        "**FELIZ ANIVERSÁRIO, {mention}!!** 🎂🎈\n"
+        "hoje o dia é TODO seu!! aproveita cada segundinho, se joga, come doce e recebe todo carinho que merece!! 💖🐱\n\n"
+        "🎁 de presente da casa, você ganhou o cargo de aniversariante do dia!!"
+    ),
+    (
+        "🎊🎂 **ALERTA DE ANIVERSÁRIO** 🎂🎊\n\n"
+        "olha quem tá de aniversário hoje... {mention}!! 👀🎉\n"
+        "que seu ano novo de vida venha cheio de conquista, risada e momentos incríveis!! 🐾🖤\n\n"
+        "PARABÉNS!! a gente te ama muito por aqui!! 😽💕"
+    ),
+    (
+        "🎈🎂 uhuuul, chegou o dia mais esperado!! 🎂🎈\n\n"
+        "**{mention}, FELIZ ANIVERSÁRIO!!** 🥳🎉\n"
+        "que esse novo ciclo te traga tudo de bom: saúde, sucesso e muitas aventuras!! ✨🐱\n\n"
+        "hoje é rei/rainha do servidor!! aproveita o dia!! 👑🖤"
+    ),
+    (
+        "🎉🥳 *solta os fogos* 🥳🎉\n\n"
+        "**PARABÉNS, {mention}!!** 🎂🎊\n"
+        "mais um ano de vida, mais um ano de história pra contar!! que seja incrível do início ao fim!! 💫🐾\n\n"
+        "a Lilu deseja um dia lindo, cheio de mimos e muito amor!! 🖤😻"
+    ),
 ]
+
 
 class BirthdayConfirmView(discord.ui.View):
     """🐱 Pergunta se a pessoa quer alterar o aniversário já registrado."""
@@ -2708,16 +2744,22 @@ class BirthdayConfirmView(discord.ui.View):
         self.stop()
 
 
-def _montar_embed_parabens(member: discord.Member) -> discord.Embed:
+def _montar_embed_parabens(member: discord.Member, role_dado: bool) -> discord.Embed:
     msg = random.choice(_BIRTHDAY_MSGS).format(mention=member.mention)
     embed = discord.Embed(
-        title="🎂 Feliz Aniversário!! 🥳",
+        title="🎂🎉 FELIZ ANIVERSÁRIO!! 🎉🎂",
         description=msg,
         color=COR_DOURADO,
         timestamp=datetime.now(timezone.utc)
     )
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="🐱 Lilu • parabéns!!")
+    if role_dado:
+        embed.add_field(
+            name="🎁 Presente da casa",
+            value=f"você ganhou o cargo <@&{BIRTHDAY_ROLE_ID}> por hoje!! 👑✨",
+            inline=False
+        )
+    embed.set_footer(text="🐱 Lilu • parabéns!! 🎊")
     return embed
 
 
@@ -2732,15 +2774,43 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
     def cog_unload(self):
         self.verificar_aniversarios.cancel()
 
+    async def _dar_cargo_aniversario(self, member: discord.Member) -> bool:
+        """Dá o cargo de aniversariante pra pessoa. Retorna True se conseguiu (ou já tinha)."""
+        role = member.guild.get_role(BIRTHDAY_ROLE_ID)
+        if not role:
+            print(f"[Lilu] ⚠️ cargo de aniversário (ID {BIRTHDAY_ROLE_ID}) não encontrado em {member.guild.name}")
+            return False
+        if role in member.roles:
+            return True
+        try:
+            await member.add_roles(role, reason="🎂 Aniversário de hoje")
+            return True
+        except discord.Forbidden:
+            print(f"[Lilu] ⚠️ sem permissão pra dar o cargo de aniversário em {member.guild.name}")
+            return False
+
+    async def _limpar_cargo_aniversario(self, guild: discord.Guild, hoje: str):
+        """Remove o cargo de quem tem ele mas o aniversário não é mais hoje."""
+        role = guild.get_role(BIRTHDAY_ROLE_ID)
+        if not role:
+            return
+        for member in list(role.members):
+            if self.birthdays.get(str(member.id)) != hoje:
+                try:
+                    await member.remove_roles(role, reason="🎂 Aniversário acabou")
+                except discord.Forbidden:
+                    pass
+
     async def _checar_parabens_na_hora(self, guild: discord.Guild, member: discord.Member, data_formatada: str):
-        """Se a data registrada agora for a de hoje, manda os parabéns na hora no canal de aniversário."""
+        """Se a data registrada agora for a de hoje, dá o cargo e manda os parabéns na hora."""
         hoje = datetime.now(timezone.utc).strftime("%d/%m")
         if data_formatada != hoje:
             return
+        role_dado = await self._dar_cargo_aniversario(member)
         ch = guild.get_channel(BIRTHDAY_CH_ID)
         if not ch:
             return
-        await ch.send(embed=_montar_embed_parabens(member))
+        await ch.send(embed=_montar_embed_parabens(member, role_dado))
 
     # ── Loop diário ───────────────────────────────
     @tasks.loop(hours=1)
@@ -2753,6 +2823,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
 
         hoje = agora.strftime("%d/%m")
         for guild in self.bot.guilds:
+            await self._limpar_cargo_aniversario(guild, hoje)
             ch = guild.get_channel(BIRTHDAY_CH_ID)
             if not ch:
                 continue
@@ -2760,7 +2831,8 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
                 if data == hoje:
                     member = guild.get_member(int(user_id_str))
                     if member:
-                        await ch.send(embed=_montar_embed_parabens(member))
+                        role_dado = await self._dar_cargo_aniversario(member)
+                        await ch.send(embed=_montar_embed_parabens(member, role_dado))
 
     @verificar_aniversarios.before_loop
     async def before_loop(self):
@@ -3016,12 +3088,15 @@ async def on_ready():
                 "🎂 Aniversários — parabéns automático\n"
                 "💬 Diálogo — aprendizado conversacional"
             ))
+            role_aniver = guild.get_role(BIRTHDAY_ROLE_ID)
+            status_role = "✅" if role_aniver else "❌ NÃO ENCONTRADO"
             embed.add_field(name="⚙️ Configuração", inline=False, value=(
                 f"📞 Log Call: <#{LOG_CALL_ID}>\n"
                 f"📝 Log Chat: <#{LOG_CHAT_ID}>\n"
                 f"👋 Boas-Vindas: <#{1504639908550279210}>\n"
                 f"💌 Convites: <#{INVITE_LOG_ID}>\n"
                 f"🎂 Aniversários: <#{BIRTHDAY_CH_ID}>\n"
+                f"👑 Cargo de aniversário: <@&{BIRTHDAY_ROLE_ID}> {status_role}\n"
                 f"🤖 Prefixo: `l!` ou `lilu `"
             ))
             embed.set_footer(text="🐱 Lilu Bot • Todos os sistemas operacionais!!")
