@@ -1,0 +1,4 @@
+def _carregar_aniversarios() -> dict:
+    if os.path.exists(BIRTHDAY_FILE):
+        ...
+    return {}   # se o arquivo não existe, começa vazio
