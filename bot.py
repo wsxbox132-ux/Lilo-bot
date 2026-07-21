@@ -2686,6 +2686,8 @@ class BirthdayConfirmView(discord.ui.View):
         )
         embed.set_footer(text="🐱 Lilu • aniversários")
         await interaction.response.edit_message(embed=embed, view=self)
+        if interaction.guild and isinstance(interaction.user, discord.Member):
+            await self.cog._checar_parabens_na_hora(interaction.guild, interaction.user, self.nova_data)
         self.stop()
 
     @discord.ui.button(label="Não, manter", style=discord.ButtonStyle.secondary, emoji="🚫")
@@ -2706,6 +2708,19 @@ class BirthdayConfirmView(discord.ui.View):
         self.stop()
 
 
+def _montar_embed_parabens(member: discord.Member) -> discord.Embed:
+    msg = random.choice(_BIRTHDAY_MSGS).format(mention=member.mention)
+    embed = discord.Embed(
+        title="🎂 Feliz Aniversário!! 🥳",
+        description=msg,
+        color=COR_DOURADO,
+        timestamp=datetime.now(timezone.utc)
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="🐱 Lilu • parabéns!!")
+    return embed
+
+
 class BirthdayCog(commands.Cog, name="LiluBirthday"):
     """🐱 Sistema de aniversários da Lilu."""
 
@@ -2716,6 +2731,16 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
 
     def cog_unload(self):
         self.verificar_aniversarios.cancel()
+
+    async def _checar_parabens_na_hora(self, guild: discord.Guild, member: discord.Member, data_formatada: str):
+        """Se a data registrada agora for a de hoje, manda os parabéns na hora no canal de aniversário."""
+        hoje = datetime.now(timezone.utc).strftime("%d/%m")
+        if data_formatada != hoje:
+            return
+        ch = guild.get_channel(BIRTHDAY_CH_ID)
+        if not ch:
+            return
+        await ch.send(embed=_montar_embed_parabens(member))
 
     # ── Loop diário ───────────────────────────────
     @tasks.loop(hours=1)
@@ -2735,16 +2760,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
                 if data == hoje:
                     member = guild.get_member(int(user_id_str))
                     if member:
-                        msg = random.choice(_BIRTHDAY_MSGS).format(mention=member.mention)
-                        embed = discord.Embed(
-                            title="🎂 Feliz Aniversário!! 🥳",
-                            description=msg,
-                            color=COR_DOURADO,
-                            timestamp=datetime.now(timezone.utc)
-                        )
-                        embed.set_thumbnail(url=member.display_avatar.url)
-                        embed.set_footer(text="🐱 Lilu • parabéns!!")
-                        await ch.send(embed=embed)
+                        await ch.send(embed=_montar_embed_parabens(member))
 
     @verificar_aniversarios.before_loop
     async def before_loop(self):
@@ -2831,6 +2847,7 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
         embed.set_thumbnail(url=message.author.display_avatar.url)
         embed.set_footer(text="🐱 Lilu • aniversários")
         await message.reply(embed=embed)
+        await self._checar_parabens_na_hora(message.guild, message.author, data_formatada)
 
     # ── Comandos de aniversário ────────────────────────────────────────
     @commands.command(name="meuniver", aliases=["meuaniver", "aniversario"])
@@ -2905,6 +2922,8 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
             description=f"anotei!! seu aniversário é **{data_formatada}** 🥳🐱🖤",
             color=COR_DOURADO
         ))
+        if ctx.guild and isinstance(ctx.author, discord.Member):
+            await self._checar_parabens_na_hora(ctx.guild, ctx.author, data_formatada)
 
     @commands.command(name="proximosniver", aliases=["proxaniver", "aniversarios"])
     async def proximos_aniversarios(self, ctx: commands.Context):
