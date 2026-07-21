@@ -943,7 +943,7 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
     async def _atualizar_cache_invites(self, guild: discord.Guild):
         """Atualiza o cache de invites do servidor."""
         try:
-            invites = await guild.fetch_invites()
+            invites = await guild.invites()
             self.invite_cache = {inv.code: inv.uses for inv in invites}
         except discord.Forbidden:
             pass
@@ -974,7 +974,7 @@ class WelcomeCog(commands.Cog, name="LiluWelcome"):
         invitador   = None
         invite_code = None
         try:
-            novos_invites = await guild.fetch_invites()
+            novos_invites = await guild.invites()
             for inv in novos_invites:
                 usos_antigos = self.invite_cache.get(inv.code, 0)
                 if inv.uses and inv.uses > usos_antigos:
