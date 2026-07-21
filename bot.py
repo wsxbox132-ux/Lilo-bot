@@ -40,8 +40,14 @@ LOG_CHAT_ID  = 1505278899200725015   # log de texto (msgs editadas/apagadas)
 INVITE_LOG_ID   = 1506846387655016528   # canal de convites (quem convidou quem)
 BIRTHDAY_CH_ID  = 1513667135073685564   # canal de aniversário (formato: 00/00 nome)
 
+# Pasta onde os arquivos de dados (JSON) ficam salvos.
+# Aponte DATA_DIR pro mount path do seu Volume no Railway (ex: "/data")
+# pra esses arquivos sobreviverem a redeploys. Se não configurar, usa a pasta atual.
+DATA_DIR = os.getenv("DATA_DIR", ".")
+os.makedirs(DATA_DIR, exist_ok=True)
+
 # Arquivo de aprendizado de diálogo
-DIALOGO_FILE = "lilu_dialogo.json"
+DIALOGO_FILE = os.path.join(DATA_DIR, "lilu_dialogo.json")
 
 # ══════════════════════════════════════════════════════════════════
 #  🤖  SETUP DO BOT
@@ -2612,7 +2618,7 @@ class DialogueCog(commands.Cog, name="LiluDialogo"):
 #  🎂  ANIVERSÁRIOS — PARABÉNS AUTOMÁTICO
 # ══════════════════════════════════════════════════════════════════
 
-BIRTHDAY_FILE = "lilu_birthdays.json"
+BIRTHDAY_FILE = os.path.join(DATA_DIR, "lilu_birthdays.json")
 
 def _carregar_aniversarios() -> dict:
     """Carrega o arquivo de aniversários. Formato: {user_id: "DD/MM"}"""
