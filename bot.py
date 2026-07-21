@@ -38,7 +38,7 @@ LOG_CHAT_ID  = 1505278899200725015   # log de texto (msgs editadas/apagadas)
 
 # Canais especiais
 INVITE_LOG_ID   = 1506846387655016528   # canal de convites (quem convidou quem)
-BIRTHDAY_CH_ID  = 1506768577917616179   # canal de aniversário (formato: 00/00 nome)
+BIRTHDAY_CH_ID  = 1513667135073685564   # canal de aniversário (formato: 00/00 nome)
 
 # Arquivo de aprendizado de diálogo
 DIALOGO_FILE = "lilu_dialogo.json"
@@ -2636,6 +2636,70 @@ _BIRTHDAY_MSGS = [
     "🥳 *joga confete* FELIZ ANIVERSÁRIO {mention}!! 🎂🐱✨ que seu dia seja tão fofo quanto você!!",
 ]
 
+class BirthdayConfirmView(discord.ui.View):
+    """🐱 Pergunta se a pessoa quer alterar o aniversário já registrado."""
+
+    def __init__(self, cog: "BirthdayCog", user_id: int, nova_data: str):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.user_id = user_id
+        self.nova_data = nova_data
+        self.message: discord.Message = None
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+    async def _apenas_autor(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message(
+                embed=discord.Embed(description="esse botão não é seu!! 😾🐱", color=COR_VERMELHO),
+                ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Sim, alterar", style=discord.ButtonStyle.success, emoji="✅")
+    async def confirmar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._apenas_autor(interaction):
+            return
+        self.cog.birthdays[str(self.user_id)] = self.nova_data
+        _salvar_aniversarios(self.cog.birthdays)
+        for item in self.children:
+            item.disabled = True
+        embed = discord.Embed(
+            title="🎂 Aniversário Atualizado!!",
+            description=f"prontinho!! seu novo aniversário é **{self.nova_data}** 🥳🐱🖤",
+            color=COR_DOURADO,
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.set_footer(text="🐱 Lilu • aniversários")
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
+
+    @discord.ui.button(label="Não, manter", style=discord.ButtonStyle.secondary, emoji="🚫")
+    async def cancelar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self._apenas_autor(interaction):
+            return
+        atual = self.cog.birthdays.get(str(self.user_id), "??/??")
+        for item in self.children:
+            item.disabled = True
+        embed = discord.Embed(
+            title="🎂 Tudo Certo!!",
+            description=f"beleza!! mantive seu aniversário como **{atual}** 🐱🖤",
+            color=COR_ROSA,
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.set_footer(text="🐱 Lilu • aniversários")
+        await interaction.response.edit_message(embed=embed, view=self)
+        self.stop()
+
+
 class BirthdayCog(commands.Cog, name="LiluBirthday"):
     """🐱 Sistema de aniversários da Lilu."""
 
@@ -2713,7 +2777,38 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
             )
             return
 
-        # Salva
+        # Já tem aniversário registrado?
+        ja_registrado = self.birthdays.get(str(message.author.id))
+        if ja_registrado:
+            if ja_registrado == data_formatada:
+                embed = discord.Embed(
+                    title="🎂 Você já tá registrado(a)!!",
+                    description=(
+                        f"{message.author.mention}, seu aniversário já é **{ja_registrado}**!! "
+                        "já tá tudo certinho aqui!! 🐱🖤"
+                    ),
+                    color=COR_ROSA,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.set_footer(text="🐱 Lilu • aniversários")
+                await message.reply(embed=embed)
+                return
+
+            view = BirthdayConfirmView(self, message.author.id, data_formatada)
+            embed = discord.Embed(
+                title="🤔 Já tem aniversário registrado!!",
+                description=(
+                    f"{message.author.mention}, você já registrou **{ja_registrado}** antes!!\n"
+                    f"quer alterar pra **{data_formatada}**?"
+                ),
+                color=COR_ROSA,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text="🐱 Lilu • aniversários")
+            view.message = await message.reply(embed=embed, view=view)
+            return
+
+        # Primeiro registro — salva direto
         self.birthdays[str(message.author.id)] = data_formatada
         _salvar_aniversarios(self.birthdays)
 
@@ -2772,6 +2867,29 @@ class BirthdayCog(commands.Cog, name="LiluBirthday"):
                 description="data inválida!! confere o dia e mês!! 🐱🖤",
                 color=COR_VERMELHO
             ))
+            return
+
+        ja_registrado = self.birthdays.get(str(ctx.author.id))
+        if ja_registrado:
+            if ja_registrado == data_formatada:
+                await ctx.send(embed=discord.Embed(
+                    description=f"seu aniversário já é **{ja_registrado}**!! já tá tudo certo!! 🐱🖤",
+                    color=COR_ROSA
+                ))
+                return
+
+            view = BirthdayConfirmView(self, ctx.author.id, data_formatada)
+            embed = discord.Embed(
+                title="🤔 Já tem aniversário registrado!!",
+                description=(
+                    f"{ctx.author.mention}, você já registrou **{ja_registrado}** antes!!\n"
+                    f"quer alterar pra **{data_formatada}**?"
+                ),
+                color=COR_ROSA,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text="🐱 Lilu • aniversários")
+            view.message = await ctx.send(embed=embed, view=view)
             return
 
         self.birthdays[str(ctx.author.id)] = data_formatada
